@@ -1,5 +1,6 @@
 <!-- import aframe and then ar.js with image tracking / location based features -->
 <script src="https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe-master.min.js"></script>
+<script src="https://unpkg.com/aframe-event-set-component@5.0.0/dist/aframe-event-set-component.min.js"></script>
 
 <script src="../assets/aframe-ar-nft.js"></script>
 <!-- <script src="../assets/aframe-ar.js"></script> -->
@@ -24,12 +25,63 @@
     font-size: 1.25em;
     color: white;
   }
+
+  /* Popup styles */
+  .popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #4CC3D9;
+    z-index: 10001;
+    display: none;
+    max-width: 80%;
+    text-align: center;
+    font-family: Arial, sans-serif;
+  }
+
+  .popup h3 {
+    margin: 0 0 10px 0;
+    color: #4CC3D9;
+  }
+
+  .popup p {
+    margin: 0 0 15px 0;
+    line-height: 1.4;
+  }
+
+  .popup button {
+    background: #4CC3D9;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .popup button:hover {
+    background: #8FF7FF;
+    color: #000;
+  }
 </style>
 
 <body style="margin : 0px; overflow: hidden;">
   <!-- minimal loader shown until image descriptors are loaded. Loading may take a while according to the device computational power -->
   <div class="arjs-loader">
     <div>Loading, please wait...</div>
+  </div>
+
+  <!-- Popup for model interaction -->
+  <div id="model-popup" class="popup">
+    <h3>Model Information</h3>
+    <p>You've touched the 3D model! This is an interactive AR experience.</p>
+    <p>The model is tracked using NFT (Natural Feature Tracking) technology.</p>
+    <button onclick="closePopup()">Close</button>
   </div>
 
   <!-- a-frame scene -->
@@ -57,11 +109,17 @@
         gltf-model="https://vazxmixjsiawhamofees.supabase.co/storage/v1/object/public/models/anvil/model.gltf"
         scale="50 50 50"
         position="0 0 0"
+        id="interactive-model"
+        event-set__click="_event: click; _target: #model-popup; style: display: block"
+        event-set__mouseenter="_event: mouseenter; material: color: #8FF7FF"
+        event-set__mouseleave="_event: mouseleave; material: color: #4CC3D9"
       >
       </a-entity>
     </a-nft>
     <!-- static camera that moves according to the device movemenents -->
-    <a-entity camera></a-entity>
+    <a-entity camera>
+      <a-cursor></a-cursor>
+    </a-entity>
   </a-scene>
   
   <!-- Debug overlay -->
@@ -71,6 +129,20 @@
   </div>
   
   <script>
+    // Popup control functions
+    function closePopup() {
+      document.getElementById('model-popup').style.display = 'none';
+    }
+
+    // Close popup when clicking outside of it
+    document.addEventListener('click', function(event) {
+      var popup = document.getElementById('model-popup');
+      if (event.target === popup || popup.contains(event.target)) {
+        return;
+      }
+      popup.style.display = 'none';
+    });
+
     (function () {
       var logEl = document.getElementById('debug-log');
       var statusEl = document.getElementById('debug-status');

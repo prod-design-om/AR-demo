@@ -1,0 +1,70 @@
+
+<!doctype HTML>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+    </head>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.loaders.min.js"></script>
+    
+    <body style='margin : 0px; overflow: hidden;'>
+        <!-- we add detectionMode and matrixCodeType to tell AR.js to recognize barcode markers -->
+        <a-scene 
+        vr-mode-ui="enabled: false;"
+        renderer="logarithmicDepthBuffer: true;"
+        embedded 
+        arjs='sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'>
+
+        <audio id="audio1" src="assets/audio/audio-1.mp3" preload="auto"></audio>
+        <audio id="audio2" src="assets/audio/audio-2.mp3" preload="auto"></audio>
+
+
+
+        <a-assets>
+            <a-asset-item id="animated-asset" src="https://raw.githubusercontent.com/nicolocarpignoli/nicolocarpignoli.github.io/master/ar-playground/models/CesiumMan.gltf"></a-asset-item>
+        </a-assets>
+
+        <a-marker type='barcode' value='1' sound="src: #audio1; positional: false; loop: false; volume: 1;">
+            <a-box position='0 0.5 0' color="yellow"></a-box>
+        </a-marker>
+
+        <a-marker id="animated-marker" type='barcode' value='2' sound="src: #audio2; positional: false; loop: false; volume: 1;">
+            <a-entity
+                gltf-model="#animated-asset"
+                scale="2">
+            </a-entity>
+        </a-marker>
+
+        <!-- use this <a-entity camera> to support multiple-markers, otherwise use <a-marker-camera> instead of </a-marker> -->
+        <a-entity camera></a-entity>
+        </a-scene>
+        <script src="./debug.js"></script>
+        <script>
+        (function(){
+            var marker1 = document.querySelector("a-marker[type='barcode'][value='1']");
+            var marker2 = document.querySelector("a-marker[type='barcode'][value='2']");
+
+            function bindSoundHandlers(marker){
+                if(!marker || !marker.components || !marker.components.sound) return;
+                var comp = marker.components.sound;
+                marker.addEventListener('markerFound', function(){
+                    try { comp.playSound(); } catch(e) { if (window.ARDebug) ARDebug.error(e); }
+                });
+                marker.addEventListener('markerLost', function(){
+                    try { comp.stopSound(); } catch(e) { if (window.ARDebug) ARDebug.error(e); }
+                });
+            }
+
+            // If components not yet initialized, wait for scene to load
+            function onLoaded(){
+                bindSoundHandlers(marker1);
+                bindSoundHandlers(marker2);
+            }
+            if (document.readyState === 'complete') onLoaded();
+            else window.addEventListener('load', onLoaded);
+        })();
+        </script>
+    </body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">    
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marker Tracking</title>
+    <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe@1.7.1/dist/aframe-master.min.js"></script>
+</head>
+
+
+
+
+
+<body>
+    <h1>Marker Tracking</h1>
+    <div class="arjs-loader">
+        <div>Loading, please wait...</div>
+    </div>
+
+    <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'>
+        <a-marker type='barcode' value='1'>
+            <a-box position='0 0.5 0' color="yellow"></a-box>
+        </a-marker>
+    </a-scene>
+
+
+
+
+</body>
+
+
+
+</html>

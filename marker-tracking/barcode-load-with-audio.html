@@ -3,6 +3,14 @@
 <html>
     <head>
         <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+        #setup-overlay { position: fixed; inset: 0; background: #0b0b0c; color: #fff; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; z-index: 2147483000; font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial; }
+        #setup-overlay.hidden { display: none; }
+        #setup-title { font-size: 18px; font-weight: 600; }
+        #setup-status { font-size: 13px; opacity: .9; }
+        #setup-btn { appearance: none; border: 1px solid #3a3b40; background: #1a1b1e; color: #fff; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+        #setup-btn:disabled { opacity: .6; cursor: default; }
+        </style>
     </head>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
@@ -11,10 +19,16 @@
     
     <body style='margin : 0px; overflow: hidden;'>
         <!-- we add detectionMode and matrixCodeType to tell AR.js to recognize barcode markers -->
+        <div id="setup-overlay">
+            <div id="setup-title">Setting up…</div>
+            <div id="setup-status">Loading assets</div>
+            <button id="setup-btn" disabled>Tap to start</button>
+        </div>
         <a-scene 
         vr-mode-ui="enabled: false;"
         renderer="logarithmicDepthBuffer: true;"
         embedded 
+        loading-screen="enabled: false"
         arjs='sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'>
 
         <audio id="audio1" src="assets/audio/audio-1.mp3" preload="auto"></audio>
@@ -42,6 +56,47 @@
         </a-scene>
         <script src="./debug.js"></script>
         <script>
+        (function(){
+            // Setup/loading overlay controller
+            var overlay = document.getElementById('setup-overlay');
+            var statusEl = document.getElementById('setup-status');
+            var btn = document.getElementById('setup-btn');
+            var scene = document.querySelector('a-scene');
+            var assets = document.querySelector('a-assets');
+            var audioEls = [document.getElementById('audio1'), document.getElementById('audio2')].filter(Boolean);
+
+            var assetsReady = false;
+            var sceneReady = false;
+            function updateReady(){
+                if (assetsReady && sceneReady) {
+                    statusEl.textContent = 'Ready';
+                    btn.disabled = false;
+                }
+            }
+            if (assets) {
+                assets.addEventListener('loaded', function(){
+                    assetsReady = true; updateReady();
+                });
+            } else {
+                assetsReady = true; updateReady();
+            }
+            if (scene) {
+                var markSceneReady = function(){ sceneReady = true; updateReady(); };
+                scene.addEventListener('loaded', markSceneReady);
+                scene.addEventListener('arReady', markSceneReady);
+            } else {
+                sceneReady = true; updateReady();
+            }
+
+            btn.addEventListener('click', function(){
+                // Attempt to unlock audio by playing and pausing muted
+                try {
+                    audioEls.forEach(function(a){ if (a) { a.muted = true; a.play().then(function(){ a.pause(); a.currentTime = 0; a.muted = false; }).catch(function(){}); } });
+                } catch(_){ }
+                overlay.classList.add('hidden');
+            });
+        })();
+
         (function(){
             var marker1 = document.querySelector("a-marker[type='barcode'][value='1']");
             var marker2 = document.querySelector("a-marker[type='barcode'][value='2']");

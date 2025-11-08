@@ -80,15 +80,18 @@
             var assets = document.querySelector('a-assets');
             var audioEls = [document.getElementById('audio1'), document.getElementById('audio2')].filter(Boolean);
 
-            // Loading state tracking
+            // Loading state tracking - more granular
             var loadingState = {
-                assets: false,
+                gltfModel: false,
                 scene: false,
-                audio: false
+                audio1: false,
+                audio2: false,
+                scripts: false
             };
 
-            var totalItems = 3; // assets, scene, audio
+            var totalItems = Object.keys(loadingState).length;
             var loadedItems = 0;
+            var isAllReady = false;
 
             function updateProgress(item, loaded) {
                 if (loadingState[item] !== loaded) {
@@ -106,9 +109,10 @@
 
             function updateStatus() {
                 var status = [];
-                if (!loadingState.assets) status.push('Loading 3D models...');
-                if (!loadingState.audio) status.push('Loading audio...');
-                if (!loadingState.scene) status.push('Initializing AR...');
+                if (!loadingState.gltfModel) status.push('Loading 3D model...');
+                if (!loadingState.audio1 || !loadingState.audio2) status.push('Loading audio files...');
+                if (!loadingState.scene) status.push('Initializing AR camera...');
+                if (!loadingState.scripts) status.push('Loading scripts...');
                 
                 if (status.length > 0) {
                     statusEl.textContent = status[0];
@@ -118,126 +122,280 @@
             }
 
             function checkAllReady() {
-                if (loadingState.assets && loadingState.scene && loadingState.audio) {
+                var allReady = Object.keys(loadingState).every(function(key) {
+                    return loadingState[key] === true;
+                });
+
+                if (allReady && !isAllReady) {
+                    isAllReady = true;
                     statusEl.textContent = 'Ready!';
                     btn.disabled = false;
+                    // Small delay to ensure everything is truly ready
+                    setTimeout(function() {
+                        if (isAllReady) {
+                            btn.disabled = false;
+                        }
+                    }, 100);
                 } else {
                     btn.disabled = true;
                 }
             }
 
+            // Track scripts loading
+            var scriptCheckAttempts = 0;
+            var maxScriptCheckAttempts = 50; // 5 seconds max
+            
+            function checkScriptsLoaded() {
+                scriptCheckAttempts++;
+                
+                // Check if A-Frame is loaded
+                var aframeLoaded = typeof AFRAME !== 'undefined';
+                
+                // Check if gesture components are registered
+                var gesturesLoaded = aframeLoaded && 
+                    AFRAME.components['gesture-handler'] && 
+                    AFRAME.components['gesture-detector'];
+                
+                // AR.js is loaded if the scene has the arjs attribute/component
+                var arjsLoaded = scene && (scene.hasAttribute('arjs') || scene.components.arjs);
+                
+                if (aframeLoaded && gesturesLoaded && (arjsLoaded || scriptCheckAttempts > 10)) {
+                    // AR.js might not expose a global, but if A-Frame and gestures are loaded, we're good
+                    updateProgress('scripts', true);
+                    updateStatus();
+                    checkAllReady();
+                } else if (scriptCheckAttempts < maxScriptCheckAttempts) {
+                    // Retry after a short delay
+                    setTimeout(checkScriptsLoaded, 100);
+                } else {
+                    // Timeout - assume scripts are loaded to not block the app
+                    console.warn('Script loading check timeout, proceeding anyway');
+                    updateProgress('scripts', true);
+                    updateStatus();
+                    checkAllReady();
+                }
+            }
+
+            // Start checking scripts after DOM is ready
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                setTimeout(checkScriptsLoaded, 50);
+            } else {
+                document.addEventListener('DOMContentLoaded', function() {
+                    setTimeout(checkScriptsLoaded, 50);
+                });
+            }
+
+            // Track GLTF model loading specifically
+            function trackGLTFModel() {
+                var gltfEntity = document.querySelector('a-entity[gltf-model]');
+                var assetItem = document.querySelector('#animated-asset');
+                
+                if (!assetItem) {
+                    // No GLTF model to load
+                    updateProgress('gltfModel', true);
+                    checkAllReady();
+                    return;
+                }
+
+                // Track asset item loading
+                var assetLoaded = false;
+                
+                function markGLTFLoaded() {
+                    if (!assetLoaded) {
+                        assetLoaded = true;
+                        // Double check the model is actually loaded
+                        setTimeout(function() {
+                            if (gltfEntity && gltfEntity.object3D && gltfEntity.object3D.children.length > 0) {
+                                updateProgress('gltfModel', true);
+                                updateStatus();
+                                checkAllReady();
+                            } else {
+                                // Model might still be loading, wait a bit more
+                                setTimeout(markGLTFLoaded, 200);
+                            }
+                        }, 100);
+                    }
+                }
+
+                // Listen for asset loaded event
+                assetItem.addEventListener('loaded', markGLTFLoaded);
+                
+                // Also listen on the entity itself
+                if (gltfEntity) {
+                    gltfEntity.addEventListener('model-loaded', markGLTFLoaded);
+                    gltfEntity.addEventListener('loaded', markGLTFLoaded);
+                }
+
+                // Listen for assets loaded
+                if (assets) {
+                    assets.addEventListener('loaded', function() {
+                        setTimeout(markGLTFLoaded, 100);
+                    });
+                }
+
+                // Fallback timeout - mark as loaded after reasonable time
+                setTimeout(function() {
+                    if (!assetLoaded) {
+                        console.warn('GLTF model loading timeout, proceeding anyway');
+                        markGLTFLoaded();
+                    }
+                }, 10000);
+            }
+
             // Track assets loading
             if (assets) {
                 assets.addEventListener('loaded', function(){
-                    updateProgress('assets', true);
-                    updateStatus();
-                    checkAllReady();
+                    trackGLTFModel();
                 });
                 assets.addEventListener('progress', function(e) {
                     if (e.detail && e.detail.total > 0) {
                         var assetPercent = Math.round((e.detail.loaded / e.detail.total) * 100);
                         if (assetPercent === 100) {
-                            updateProgress('assets', true);
-                            updateStatus();
-                            checkAllReady();
+                            trackGLTFModel();
                         }
                     }
                 });
+                // Start tracking GLTF after a short delay to ensure assets element is ready
+                setTimeout(trackGLTFModel, 100);
             } else {
-                updateProgress('assets', true);
+                updateProgress('gltfModel', true);
                 checkAllReady();
             }
 
             // Track scene loading
             if (scene) {
+                var sceneReadyFired = false;
                 var markSceneReady = function(){ 
-                    updateProgress('scene', true);
-                    updateStatus();
-                    checkAllReady();
+                    if (!sceneReadyFired) {
+                        sceneReadyFired = true;
+                        updateProgress('scene', true);
+                        updateStatus();
+                        checkAllReady();
+                    }
                 };
                 scene.addEventListener('loaded', markSceneReady);
                 scene.addEventListener('arReady', markSceneReady);
+                scene.addEventListener('renderstart', markSceneReady);
+                
+                // Fallback - check if scene is already loaded
+                if (scene.hasLoaded) {
+                    markSceneReady();
+                }
             } else {
                 updateProgress('scene', true);
                 checkAllReady();
             }
 
-            // Preload and track audio loading
+            // Robust audio preloading
             function preloadAudio() {
                 if (audioEls.length === 0) {
-                    updateProgress('audio', true);
+                    updateProgress('audio1', true);
+                    updateProgress('audio2', true);
                     checkAllReady();
                     return;
                 }
 
-                var audioLoaded = 0;
-                var totalAudio = audioEls.length;
+                var audioStates = {};
+                audioEls.forEach(function(audio, index) {
+                    if (!audio) {
+                        audioStates['audio' + (index + 1)] = true;
+                        return;
+                    }
+                    audioStates['audio' + (index + 1)] = false;
+                });
 
-                function onAudioLoaded() {
-                    audioLoaded++;
-                    if (audioLoaded === totalAudio) {
-                        updateProgress('audio', true);
+                function checkAudioReady(audioIndex) {
+                    var key = 'audio' + audioIndex;
+                    if (!audioStates[key]) {
+                        audioStates[key] = true;
+                        updateProgress(key, true);
                         updateStatus();
                         checkAllReady();
                     }
                 }
 
-                audioEls.forEach(function(audio) {
+                audioEls.forEach(function(audio, index) {
                     if (!audio) {
-                        onAudioLoaded();
+                        checkAudioReady(index + 1);
                         return;
                     }
 
+                    var audioIndex = index + 1;
+                    var loaded = false;
+
                     // Set preload attribute
                     audio.preload = 'auto';
+                    audio.load(); // Force load
 
-                    // Track loading progress
-                    function handleCanPlay() {
-                        audio.removeEventListener('canplaythrough', handleCanPlay);
-                        audio.removeEventListener('loadeddata', handleCanPlay);
-                        audio.removeEventListener('error', handleError);
-                        onAudioLoaded();
+                    function markAudioLoaded() {
+                        if (!loaded) {
+                            loaded = true;
+                            checkAudioReady(audioIndex);
+                        }
                     }
 
                     function handleError() {
-                        audio.removeEventListener('canplaythrough', handleCanPlay);
-                        audio.removeEventListener('loadeddata', handleCanPlay);
-                        audio.removeEventListener('error', handleError);
-                        // Even if error, count as loaded to not block the app
-                        console.warn('Audio failed to load:', audio.src);
-                        onAudioLoaded();
+                        console.warn('Audio ' + audioIndex + ' failed to load:', audio.src);
+                        // Still mark as loaded to not block the app
+                        markAudioLoaded();
                     }
 
-                    // Try to load the audio
-                    if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
-                        onAudioLoaded();
-                    } else {
-                        audio.addEventListener('canplaythrough', handleCanPlay);
-                        audio.addEventListener('loadeddata', handleCanPlay);
-                        audio.addEventListener('error', handleError);
-                        
-                        // Force load by setting currentTime (triggers load)
-                        try {
-                            audio.load();
-                        } catch(e) {
-                            console.warn('Error loading audio:', e);
-                            handleError();
-                        }
+                    // Multiple event listeners for robustness
+                    var events = ['canplaythrough', 'loadeddata', 'loadedmetadata'];
+                    events.forEach(function(eventName) {
+                        audio.addEventListener(eventName, function() {
+                            if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+                                markAudioLoaded();
+                            }
+                        }, { once: true });
+                    });
+
+                    audio.addEventListener('error', handleError, { once: true });
+
+                    // Check if already loaded
+                    if (audio.readyState >= 3) {
+                        markAudioLoaded();
                     }
+
+                    // Fallback timeout
+                    setTimeout(function() {
+                        if (!loaded) {
+                            console.warn('Audio ' + audioIndex + ' loading timeout, proceeding anyway');
+                            markAudioLoaded();
+                        }
+                    }, 8000);
                 });
             }
 
             // Start audio preloading
             if (document.readyState === 'complete' || document.readyState === 'interactive') {
-                preloadAudio();
+                setTimeout(preloadAudio, 100);
             } else {
-                document.addEventListener('DOMContentLoaded', preloadAudio);
+                document.addEventListener('DOMContentLoaded', function() {
+                    setTimeout(preloadAudio, 100);
+                });
             }
 
             // Initial status update
             updateStatus();
 
-            btn.addEventListener('click', function(){
+            // Prevent button click if not ready
+            btn.addEventListener('click', function(e){
+                if (btn.disabled || !isAllReady) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                // Final verification before starting
+                var allAssetsReady = loadingState.gltfModel && loadingState.scene && 
+                                    loadingState.audio1 && loadingState.audio2 && 
+                                    loadingState.scripts;
+
+                if (!allAssetsReady) {
+                    statusEl.textContent = 'Still loading, please wait...';
+                    return false;
+                }
+
                 // Attempt to unlock audio by playing and pausing muted
                 try {
                     audioEls.forEach(function(a){ 
@@ -251,6 +409,7 @@
                         } 
                     }); 
                 } catch(_){ }
+                
                 overlay.classList.add('hidden');
             });
         })();

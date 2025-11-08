@@ -1,0 +1,283 @@
+
+<!doctype HTML>
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <style>
+        #setup-overlay { position: fixed; inset: 0; background: #0b0b0c; color: #fff; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; z-index: 2147483000; font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial; }
+        #setup-overlay.hidden { display: none; }
+        #setup-title { font-size: 18px; font-weight: 600; }
+        #setup-status { font-size: 13px; opacity: .9; }
+        #progress-container { width: 280px; margin-top: 8px; }
+        #progress-bar { width: 100%; height: 6px; background: #3a3b40; border-radius: 3px; overflow: hidden; }
+        #progress-fill { height: 100%; background: #4a9eff; width: 0%; transition: width 0.3s ease; }
+        #progress-text { font-size: 11px; opacity: .7; margin-top: 6px; text-align: center; }
+        #setup-btn { appearance: none; border: 1px solid #3a3b40; background: #1a1b1e; color: #fff; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-top: 8px; }
+        #setup-btn:disabled { opacity: .6; cursor: default; }
+        </style>
+    </head>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.loaders.min.js"></script>
+    <script src="./scripts/gestures.js"></script>
+    
+    <body style='margin : 0px; overflow: hidden;'>
+        <!-- we add detectionMode and matrixCodeType to tell AR.js to recognize barcode markers -->
+        <div id="setup-overlay">
+            <div id="setup-title">Setting up…</div>
+            <div id="setup-status">Loading assets...</div>
+            <div id="progress-container">
+                <div id="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+                <div id="progress-text">0%</div>
+            </div>
+            <button id="setup-btn" disabled>Tap to start</button>
+        </div>
+        <a-scene 
+        vr-mode-ui="enabled: false;"
+        renderer="logarithmicDepthBuffer: true;"
+        embedded 
+        loading-screen="enabled: false"
+        arjs='sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'
+        gesture-detector>
+
+        <audio id="audio1" src="assets/audio/audio-1.mp3" preload="true"></audio>
+        <audio id="audio2" src="assets/audio/audio-2.mp3" preload="true"></audio>
+
+
+
+        <a-assets>
+            <a-asset-item id="animated-asset" src="https://raw.githubusercontent.com/nicolocarpignoli/nicolocarpignoli.github.io/master/ar-playground/models/CesiumMan.gltf"></a-asset-item>
+        </a-assets>
+
+        <a-marker type='barcode' value='1' sound="src: #audio1; positional: false; loop: false; volume: 1;">
+            <a-box position='0 0.5 0' color="yellow" gesture-handler></a-box>
+        </a-marker>
+
+        <a-marker id="animated-marker" type='barcode' value='2' sound="src: #audio2; positional: false; loop: false; volume: 1;">
+            <a-entity
+                gltf-model="#animated-asset"
+                scale="2"
+                gesture-handler>
+            </a-entity>
+        </a-marker>
+
+        <!-- use this <a-entity camera> to support multiple-markers, otherwise use <a-marker-camera> instead of </a-marker> -->
+        <a-entity camera></a-entity>
+        </a-scene>
+        <script src="./debug.js"></script>
+        <script>
+        (function(){
+            // Setup/loading overlay controller
+            var overlay = document.getElementById('setup-overlay');
+            var statusEl = document.getElementById('setup-status');
+            var progressFill = document.getElementById('progress-fill');
+            var progressText = document.getElementById('progress-text');
+            var btn = document.getElementById('setup-btn');
+            var scene = document.querySelector('a-scene');
+            var assets = document.querySelector('a-assets');
+            var audioEls = [document.getElementById('audio1'), document.getElementById('audio2')].filter(Boolean);
+
+            // Loading state tracking
+            var loadingState = {
+                assets: false,
+                scene: false,
+                audio: false
+            };
+
+            var totalItems = 3; // assets, scene, audio
+            var loadedItems = 0;
+
+            function updateProgress(item, loaded) {
+                if (loadingState[item] !== loaded) {
+                    loadingState[item] = loaded;
+                    if (loaded) {
+                        loadedItems++;
+                    } else {
+                        loadedItems--;
+                    }
+                }
+                var percent = Math.round((loadedItems / totalItems) * 100);
+                progressFill.style.width = percent + '%';
+                progressText.textContent = percent + '%';
+            }
+
+            function updateStatus() {
+                var status = [];
+                if (!loadingState.assets) status.push('Loading 3D models...');
+                if (!loadingState.audio) status.push('Loading audio...');
+                if (!loadingState.scene) status.push('Initializing AR...');
+                
+                if (status.length > 0) {
+                    statusEl.textContent = status[0];
+                } else {
+                    statusEl.textContent = 'Ready!';
+                }
+            }
+
+            function checkAllReady() {
+                if (loadingState.assets && loadingState.scene && loadingState.audio) {
+                    statusEl.textContent = 'Ready!';
+                    btn.disabled = false;
+                } else {
+                    btn.disabled = true;
+                }
+            }
+
+            // Track assets loading
+            if (assets) {
+                assets.addEventListener('loaded', function(){
+                    updateProgress('assets', true);
+                    updateStatus();
+                    checkAllReady();
+                });
+                assets.addEventListener('progress', function(e) {
+                    if (e.detail && e.detail.total > 0) {
+                        var assetPercent = Math.round((e.detail.loaded / e.detail.total) * 100);
+                        if (assetPercent === 100) {
+                            updateProgress('assets', true);
+                            updateStatus();
+                            checkAllReady();
+                        }
+                    }
+                });
+            } else {
+                updateProgress('assets', true);
+                checkAllReady();
+            }
+
+            // Track scene loading
+            if (scene) {
+                var markSceneReady = function(){ 
+                    updateProgress('scene', true);
+                    updateStatus();
+                    checkAllReady();
+                };
+                scene.addEventListener('loaded', markSceneReady);
+                scene.addEventListener('arReady', markSceneReady);
+            } else {
+                updateProgress('scene', true);
+                checkAllReady();
+            }
+
+            // Preload and track audio loading
+            function preloadAudio() {
+                if (audioEls.length === 0) {
+                    updateProgress('audio', true);
+                    checkAllReady();
+                    return;
+                }
+
+                var audioLoaded = 0;
+                var totalAudio = audioEls.length;
+
+                function onAudioLoaded() {
+                    audioLoaded++;
+                    if (audioLoaded === totalAudio) {
+                        updateProgress('audio', true);
+                        updateStatus();
+                        checkAllReady();
+                    }
+                }
+
+                audioEls.forEach(function(audio) {
+                    if (!audio) {
+                        onAudioLoaded();
+                        return;
+                    }
+
+                    // Set preload attribute
+                    audio.preload = 'auto';
+
+                    // Track loading progress
+                    function handleCanPlay() {
+                        audio.removeEventListener('canplaythrough', handleCanPlay);
+                        audio.removeEventListener('loadeddata', handleCanPlay);
+                        audio.removeEventListener('error', handleError);
+                        onAudioLoaded();
+                    }
+
+                    function handleError() {
+                        audio.removeEventListener('canplaythrough', handleCanPlay);
+                        audio.removeEventListener('loadeddata', handleCanPlay);
+                        audio.removeEventListener('error', handleError);
+                        // Even if error, count as loaded to not block the app
+                        console.warn('Audio failed to load:', audio.src);
+                        onAudioLoaded();
+                    }
+
+                    // Try to load the audio
+                    if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+                        onAudioLoaded();
+                    } else {
+                        audio.addEventListener('canplaythrough', handleCanPlay);
+                        audio.addEventListener('loadeddata', handleCanPlay);
+                        audio.addEventListener('error', handleError);
+                        
+                        // Force load by setting currentTime (triggers load)
+                        try {
+                            audio.load();
+                        } catch(e) {
+                            console.warn('Error loading audio:', e);
+                            handleError();
+                        }
+                    }
+                });
+            }
+
+            // Start audio preloading
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                preloadAudio();
+            } else {
+                document.addEventListener('DOMContentLoaded', preloadAudio);
+            }
+
+            // Initial status update
+            updateStatus();
+
+            btn.addEventListener('click', function(){
+                // Attempt to unlock audio by playing and pausing muted
+                try {
+                    audioEls.forEach(function(a){ 
+                        if (a) { 
+                            a.muted = true; 
+                            a.play().then(function(){ 
+                                a.pause(); 
+                                a.currentTime = 0; 
+                                a.muted = false; 
+                            }).catch(function(){}); 
+                        } 
+                    }); 
+                } catch(_){ }
+                overlay.classList.add('hidden');
+            });
+        })();
+
+        (function(){
+            var marker1 = document.querySelector("a-marker[type='barcode'][value='1']");
+            var marker2 = document.querySelector("a-marker[type='barcode'][value='2']");
+
+            function bindSoundHandlers(marker){
+                if(!marker || !marker.components || !marker.components.sound) return;
+                var comp = marker.components.sound;
+                marker.addEventListener('markerFound', function(){
+                    try { comp.playSound(); } catch(e) { if (window.ARDebug) ARDebug.error(e); }
+                });
+                marker.addEventListener('markerLost', function(){
+                    try { comp.stopSound(); } catch(e) { if (window.ARDebug) ARDebug.error(e); }
+                });
+            }
+
+            // If components not yet initialized, wait for scene to load
+            function onLoaded(){
+                bindSoundHandlers(marker1);
+                bindSoundHandlers(marker2);
+            }
+            if (document.readyState === 'complete') onLoaded();
+            else window.addEventListener('load', onLoaded);
+        })();
+        </script>
+    </body>
+</html>

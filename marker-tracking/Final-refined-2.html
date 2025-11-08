@@ -801,6 +801,13 @@
             var scannedMarkers = new Set(); // Set of marker IDs that have been scanned
             var allMarkers = ['marker-1', 'marker-2']; // All available markers
             
+            // Store playback timestamps for each audio track (global scope)
+            window.audioTimestamps = {
+                'audio1': 0,
+                'audio2': 0
+            };
+            var audioTimestamps = window.audioTimestamps; // Local reference for convenience
+            
             // Helper function to get marker ID
             function getMarkerId(marker) {
                 if (!marker) return null;
@@ -813,21 +820,29 @@
                 return document.getElementById(markerId);
             }
             
-            // Function to stop all audio elements
+            // Function to stop all audio elements and save their timestamps
             function stopAllAudio() {
                 var audio1 = document.getElementById('audio1');
                 var audio2 = document.getElementById('audio2');
                 
-                [audio1, audio2].forEach(function(audio) {
-                    if (audio) {
-                        try {
-                            audio.pause();
-                            // Don't reset currentTime - let user resume from where they paused
-                        } catch(e) {
-                            console.warn('Error stopping audio:', e);
-                        }
+                // Save current playback timestamps before pausing
+                if (audio1) {
+                    try {
+                        audioTimestamps['audio1'] = audio1.currentTime;
+                        audio1.pause();
+                    } catch(e) {
+                        console.warn('Error stopping audio1:', e);
                     }
-                });
+                }
+                
+                if (audio2) {
+                    try {
+                        audioTimestamps['audio2'] = audio2.currentTime;
+                        audio2.pause();
+                    } catch(e) {
+                        console.warn('Error stopping audio2:', e);
+                    }
+                }
                 
                 // Also stop via sound components
                 var marker1 = document.getElementById('marker-1');
@@ -842,6 +857,13 @@
                         }
                     }
                 });
+            }
+            
+            // Helper function to get audio ID from marker
+            function getAudioIdFromMarker(marker) {
+                if (!marker) return null;
+                var markerValue = marker.getAttribute('value');
+                return markerValue === '1' ? 'audio1' : (markerValue === '2' ? 'audio2' : null);
             }
             
             // Function to play audio based on currentMarker value
@@ -872,7 +894,7 @@
                         if (delayedAudioEl && typeof window.updateMusicPlayerForMarker === 'function') {
                             console.log('Got audio element on retry:', delayedAudioEl);
                             window.updateMusicPlayerForMarker(delayedAudioEl, songName);
-                            playAudioElement(delayedAudioEl, songName);
+                            playAudioElement(delayedAudioEl, songName, marker);
                         }
                     }, 200);
                     return;
@@ -884,12 +906,12 @@
                     window.updateMusicPlayerForMarker(audioEl, songName);
                 }
                 
-                // Play the current marker's audio
-                playAudioElement(audioEl, songName);
+                // Play the current marker's audio (pass marker to restore timestamp)
+                playAudioElement(audioEl, songName, marker);
             }
             
             // Helper function to play audio element
-            function playAudioElement(audioEl, songName) {
+            function playAudioElement(audioEl, songName, marker) {
                 if (!audioEl) return;
                 
                 var soundOn = typeof window.soundEnabled !== 'undefined' ? window.soundEnabled : true;
@@ -899,9 +921,24 @@
                 }
                 
                 try {
-                    // Reset audio to start when switching markers
-                    // This ensures the new marker's audio starts from the beginning
-                    audioEl.currentTime = 0;
+                    // Get audio ID to retrieve stored timestamp
+                    var audioId = null;
+                    if (marker) {
+                        audioId = getAudioIdFromMarker(marker);
+                    } else {
+                        // Fallback: determine from audio element ID
+                        audioId = audioEl.id;
+                    }
+                    
+                    // Restore playback position from stored timestamp
+                    if (audioId && window.audioTimestamps && window.audioTimestamps.hasOwnProperty(audioId)) {
+                        audioEl.currentTime = window.audioTimestamps[audioId];
+                        console.log('Resuming audio from timestamp:', audioId, window.audioTimestamps[audioId]);
+                    } else {
+                        // If no stored timestamp, start from beginning
+                        audioEl.currentTime = 0;
+                        console.log('Starting audio from beginning:', audioId);
+                    }
                     
                     // Play audio
                     var playPromise = audioEl.play();
@@ -1451,6 +1488,13 @@
                     var newTime = percent * currentAudio.duration;
                     
                     currentAudio.currentTime = Math.max(0, Math.min(newTime, currentAudio.duration));
+                    
+                    // Update stored timestamp for this audio
+                    var audioId = currentAudio.id;
+                    if (audioId && window.audioTimestamps && window.audioTimestamps.hasOwnProperty(audioId)) {
+                        window.audioTimestamps[audioId] = currentAudio.currentTime;
+                    }
+                    
                     updateProgress();
                 });
             }
@@ -1550,11 +1594,17 @@
                     }
                 });
                 
-                // Update button state when paused
+                // Update button state when paused and save timestamp
                 audio.addEventListener('pause', function() {
                     if (currentAudio === audio && audio.currentTime > 0) {
                         isPaused = true;
                         updatePlayPauseButton();
+                        
+                        // Save timestamp when paused
+                        var audioId = audio.id;
+                        if (audioId && window.audioTimestamps && window.audioTimestamps.hasOwnProperty(audioId)) {
+                            window.audioTimestamps[audioId] = audio.currentTime;
+                        }
                     }
                 });
                 
@@ -1563,6 +1613,14 @@
                     if (currentAudio === audio) {
                         isPaused = true;
                         updatePlayPauseButton();
+                        
+                        // Reset timestamp when audio ends
+                        var audioId = audio.id;
+                        if (audioId && window.audioTimestamps && window.audioTimestamps.hasOwnProperty(audioId)) {
+                            window.audioTimestamps[audioId] = 0;
+                            console.log('Audio ended, resetting timestamp for:', audioId);
+                        }
+                        
                         // Keep progress update running to show final position
                         if (!progressUpdateInterval) {
                             startProgressUpdate();
@@ -1570,12 +1628,19 @@
                     }
                 });
                 
-                // Update progress bar as audio plays
+                // Update progress bar as audio plays and save timestamp
                 audio.addEventListener('timeupdate', function() {
                     if (currentAudio === audio) {
                         updateProgress();
+                        
+                        // Update stored timestamp periodically during playback
+                        var audioId = audio.id;
+                        if (audioId && window.audioTimestamps && window.audioTimestamps.hasOwnProperty(audioId)) {
+                            window.audioTimestamps[audioId] = audio.currentTime;
+                        }
                     }
                 });
+                
             });
         })();
         </script>

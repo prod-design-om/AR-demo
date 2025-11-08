@@ -385,25 +385,9 @@
                 raycaster.near = 0.01;
                 raycaster.far = 1000;
                 
+                // First try actual raycast intersection
                 var intersects = raycaster.intersectObjects(objectsToTest, true);
                 console.log('Raycast intersects:', intersects.length);
-                
-                // Debug: Log object positions if no intersections
-                if (intersects.length === 0 && objectsToTest.length > 0) {
-                    objectsToTest.forEach(function(obj, idx) {
-                        var worldPos = new THREE.Vector3();
-                        obj.getWorldPosition(worldPos);
-                        var distance = ray.origin.distanceTo(worldPos);
-                        var toObject = new THREE.Vector3().subVectors(worldPos, ray.origin).normalize();
-                        var dot = ray.direction.dot(toObject);
-                        console.log('Object ' + idx + ':', {
-                            worldPos: { x: worldPos.x.toFixed(3), y: worldPos.y.toFixed(3), z: worldPos.z.toFixed(3) },
-                            distance: distance.toFixed(3),
-                            directionToObject: { x: toObject.x.toFixed(3), y: toObject.y.toFixed(3), z: toObject.z.toFixed(3) },
-                            dotProduct: dot.toFixed(3) // Should be close to 1 if ray points at object
-                        });
-                    });
-                }
                 
                 if (intersects.length > 0) {
                     console.log('Intersection details:', intersects[0]);
@@ -427,9 +411,59 @@
                         depth++;
                     }
                     console.log('Intersection found but couldn\'t identify model');
-                } else {
-                    console.log('No intersections found');
                 }
+                
+                // If no intersection found, use proximity/direction check as fallback
+                // This works when ray is pointing at object but geometry intersection fails
+                if (intersects.length === 0 && objectsToTest.length > 0) {
+                    var bestMatch = null;
+                    var bestDot = -1;
+                    
+                    objectsToTest.forEach(function(obj, idx) {
+                        var worldPos = new THREE.Vector3();
+                        obj.getWorldPosition(worldPos);
+                        var distance = ray.origin.distanceTo(worldPos);
+                        var toObject = new THREE.Vector3().subVectors(worldPos, ray.origin).normalize();
+                        var dot = ray.direction.dot(toObject);
+                        
+                        console.log('Object ' + idx + ':', {
+                            worldPos: { x: worldPos.x.toFixed(3), y: worldPos.y.toFixed(3), z: worldPos.z.toFixed(3) },
+                            distance: distance.toFixed(3),
+                            directionToObject: { x: toObject.x.toFixed(3), y: toObject.y.toFixed(3), z: toObject.z.toFixed(3) },
+                            dotProduct: dot.toFixed(3)
+                        });
+                        
+                        // If ray is pointing at object (dot > 0.7) and within reasonable distance (< 10 units)
+                        if (dot > 0.7 && distance < 10 && dot > bestDot) {
+                            bestDot = dot;
+                            bestMatch = obj;
+                        }
+                    });
+                    
+                    // If we found a good match, return it
+                    if (bestMatch) {
+                        console.log('Using proximity match with dot:', bestDot.toFixed(3));
+                        // Find which model this object belongs to
+                        var parent = bestMatch;
+                        var depth = 0;
+                        while (parent && depth < 10) {
+                            if (parent.el) {
+                                if (parent.el === boxModel || (marker1 && parent.el === marker1)) {
+                                    console.log('Proximity hit box model');
+                                    return { model: 'box', intersect: null };
+                                }
+                                if (parent.el === animatedModel || (marker2 && parent.el === marker2)) {
+                                    console.log('Proximity hit animated model');
+                                    return { model: 'animated', intersect: null };
+                                }
+                            }
+                            parent = parent.parent;
+                            depth++;
+                        }
+                    }
+                }
+                
+                console.log('No intersections found');
                 return null;
             }
 

@@ -14,6 +14,55 @@
         #progress-text { font-size: 11px; opacity: .7; margin-top: 6px; text-align: center; }
         #setup-btn { appearance: none; border: 1px solid #3a3b40; background: #1a1b1e; color: #fff; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-top: 8px; }
         #setup-btn:disabled { opacity: .6; cursor: default; }
+        
+        /* Navbar styles */
+        #navbar { position: fixed; top: 0; left: 0; right: 0; height: 50px; background: #000; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 2147482999; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        #navbar a { color: #fff; text-decoration: none; font-size: 16px; font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial; transition: opacity 0.2s; }
+        #navbar a:hover { opacity: 0.7; }
+        #sound-toggle { background: transparent; border: 1px solid #fff; color: #fff; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial; transition: all 0.2s; }
+        #sound-toggle:hover { background: rgba(255,255,255,0.1); }
+        #sound-toggle.sound-off { opacity: 0.5; }
+        
+        /* Scanning guide overlay */
+        #scanning-guide { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2147482998; pointer-events: none; display: none; }
+        #scanning-guide.active { display: block; }
+        #scanning-square { width: 250px; height: 250px; position: relative; }
+        #scanning-square-corner-tl,
+        #scanning-square-corner-tr,
+        #scanning-square-corner-bl,
+        #scanning-square-corner-br { position: absolute; width: 30px; height: 30px; border: 2px solid rgba(255, 255, 255, 0.4); }
+        #scanning-square-corner-tl { top: 0; left: 0; border-right: none; border-bottom: none; }
+        #scanning-square-corner-tr { top: 0; right: 0; border-left: none; border-bottom: none; }
+        #scanning-square-corner-bl { bottom: 0; left: 0; border-right: none; border-top: none; }
+        #scanning-square-corner-br { bottom: 0; right: 0; border-left: none; border-top: none; }
+        #scanning-text { margin-top: 20px; text-align: center; color: rgba(255, 255, 255, 0.5); font-size: 16px; font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial; text-shadow: 0 2px 4px rgba(0,0,0,0.5); font-weight: 500; }
+        @media (max-width: 768px) {
+            #scanning-square { width: 200px; height: 200px; }
+            #scanning-square-corner-tl,
+            #scanning-square-corner-tr,
+            #scanning-square-corner-bl,
+            #scanning-square-corner-br { width: 25px; height: 25px; }
+            #scanning-text { font-size: 14px; margin-top: 15px; }
+        }
+        
+        /* Music player UI */
+        #music-player { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px); padding: 15px 20px; z-index: 2147482997; display: none; box-shadow: 0 -2px 10px rgba(0,0,0,0.3); }
+        #music-player.active { display: block; }
+        #music-player-content { display: flex; align-items: center; gap: 15px; max-width: 600px; margin: 0 auto; }
+        #music-player-info { flex: 1; min-width: 0; }
+        #music-player-song-name { color: #fff; font-size: 16px; font-weight: 500; font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        #music-player-progress-container { width: 100%; height: 4px; background: rgba(255, 255, 255, 0.2); border-radius: 2px; cursor: pointer; position: relative; }
+        #music-player-progress-bar { height: 100%; background: #4a9eff; border-radius: 2px; width: 0%; transition: width 0.1s linear; }
+        #music-player-controls { display: flex; align-items: center; gap: 10px; }
+        #music-player-play-pause { background: transparent; border: 2px solid #fff; color: #fff; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all 0.2s; flex-shrink: 0; }
+        #music-player-play-pause:hover { background: rgba(255, 255, 255, 0.1); }
+        #music-player-play-pause:active { transform: scale(0.95); }
+        @media (max-width: 768px) {
+            #music-player { padding: 12px 15px; }
+            #music-player-content { gap: 12px; }
+            #music-player-song-name { font-size: 14px; }
+            #music-player-play-pause { width: 36px; height: 36px; font-size: 16px; }
+        }
         </style>
     </head>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
@@ -23,6 +72,38 @@
     <script src="./scripts/gestures.js"></script>
     
     <body style='margin : 0px; overflow: hidden;'>
+        <!-- Navbar -->
+        <nav id="navbar">
+            <a href="#" id="about-link">About</a>
+            <button id="sound-toggle">🔊 Sound On</button>
+        </nav>
+        
+        <!-- Scanning guide overlay -->
+        <div id="scanning-guide">
+            <div id="scanning-square">
+                <div id="scanning-square-corner-tl"></div>
+                <div id="scanning-square-corner-tr"></div>
+                <div id="scanning-square-corner-bl"></div>
+                <div id="scanning-square-corner-br"></div>
+            </div>
+            <div id="scanning-text">Scan marker, keep the marker in this square</div>
+        </div>
+        
+        <!-- Music player UI -->
+        <div id="music-player">
+            <div id="music-player-content">
+                <div id="music-player-info">
+                    <div id="music-player-song-name">Song Name</div>
+                    <div id="music-player-progress-container">
+                        <div id="music-player-progress-bar"></div>
+                    </div>
+                </div>
+                <div id="music-player-controls">
+                    <button id="music-player-play-pause">⏸</button>
+                </div>
+            </div>
+        </div>
+        
         <!-- we add detectionMode and matrixCodeType to tell AR.js to recognize barcode markers -->
         <div id="setup-overlay">
             <div id="setup-title">Setting up…</div>
@@ -141,6 +222,12 @@
                 }
             }
 
+            // Detect mobile devices
+            function isMobile() {
+                return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                       (window.innerWidth <= 768);
+            }
+
             // Track scripts loading
             var scriptCheckAttempts = 0;
             var maxScriptCheckAttempts = 50; // 5 seconds max
@@ -199,21 +286,31 @@
 
                 // Track asset item loading
                 var assetLoaded = false;
+                var mobileDevice = isMobile();
+                // On mobile, use shorter timeout for model loading
+                var modelTimeout = mobileDevice ? 8000 : 10000;
                 
                 function markGLTFLoaded() {
                     if (!assetLoaded) {
                         assetLoaded = true;
-                        // Double check the model is actually loaded
-                        setTimeout(function() {
-                            if (gltfEntity && gltfEntity.object3D && gltfEntity.object3D.children.length > 0) {
-                                updateProgress('gltfModel', true);
-                                updateStatus();
-                                checkAllReady();
-                            } else {
-                                // Model might still be loading, wait a bit more
-                                setTimeout(markGLTFLoaded, 200);
-                            }
-                        }, 100);
+                        // On mobile, be more lenient - don't require children to be loaded
+                        if (mobileDevice) {
+                            updateProgress('gltfModel', true);
+                            updateStatus();
+                            checkAllReady();
+                        } else {
+                            // Double check the model is actually loaded (desktop)
+                            setTimeout(function() {
+                                if (gltfEntity && gltfEntity.object3D && gltfEntity.object3D.children.length > 0) {
+                                    updateProgress('gltfModel', true);
+                                    updateStatus();
+                                    checkAllReady();
+                                } else {
+                                    // Model might still be loading, wait a bit more
+                                    setTimeout(markGLTFLoaded, 200);
+                                }
+                            }, 100);
+                        }
                     }
                 }
 
@@ -233,13 +330,23 @@
                     });
                 }
 
+                // On mobile, also check if asset item has src attribute (indicates it's at least trying to load)
+                if (mobileDevice) {
+                    setTimeout(function() {
+                        if (!assetLoaded && assetItem && assetItem.hasAttribute('src')) {
+                            console.log('GLTF model asset detected on mobile, proceeding');
+                            markGLTFLoaded();
+                        }
+                    }, 2000);
+                }
+
                 // Fallback timeout - mark as loaded after reasonable time
                 setTimeout(function() {
                     if (!assetLoaded) {
                         console.warn('GLTF model loading timeout, proceeding anyway');
                         markGLTFLoaded();
                     }
-                }, 10000);
+                }, modelTimeout);
             }
 
             // Track assets loading
@@ -265,6 +372,7 @@
             // Track scene loading
             if (scene) {
                 var sceneReadyFired = false;
+                var mobileDevice = isMobile();
                 var markSceneReady = function(){ 
                     if (!sceneReadyFired) {
                         sceneReadyFired = true;
@@ -281,6 +389,22 @@
                 if (scene.hasLoaded) {
                     markSceneReady();
                 }
+                
+                // On mobile, be more lenient - mark scene as ready after a shorter timeout
+                // AR.js initialization can be slower on mobile devices
+                setTimeout(function() {
+                    if (!sceneReadyFired) {
+                        // Check if scene has at least started initializing
+                        if (scene.hasLoaded || (scene.components && scene.components.renderer)) {
+                            console.log('Scene initialization detected on mobile, proceeding');
+                            markSceneReady();
+                        } else if (mobileDevice) {
+                            // On mobile, proceed anyway after timeout to avoid blocking
+                            console.warn('Scene loading timeout on mobile, proceeding anyway');
+                            markSceneReady();
+                        }
+                    }
+                }, mobileDevice ? 5000 : 10000);
             } else {
                 updateProgress('scene', true);
                 checkAllReady();
@@ -314,6 +438,10 @@
                     }
                 }
 
+                var mobileDevice = isMobile();
+                // On mobile, use shorter timeout since audio may require user interaction
+                var audioTimeout = mobileDevice ? 3000 : 8000;
+
                 audioEls.forEach(function(audio, index) {
                     if (!audio) {
                         checkAudioReady(index + 1);
@@ -325,7 +453,13 @@
 
                     // Set preload attribute
                     audio.preload = 'auto';
-                    audio.load(); // Force load
+                    
+                    // On mobile, try to load but don't block if it fails
+                    try {
+                        audio.load(); // Force load
+                    } catch(e) {
+                        console.warn('Audio load() failed, will use timeout fallback');
+                    }
 
                     function markAudioLoaded() {
                         if (!loaded) {
@@ -341,10 +475,10 @@
                     }
 
                     // Multiple event listeners for robustness
-                    var events = ['canplaythrough', 'loadeddata', 'loadedmetadata'];
+                    var events = ['canplaythrough', 'loadeddata', 'loadedmetadata', 'canplay'];
                     events.forEach(function(eventName) {
                         audio.addEventListener(eventName, function() {
-                            if (audio.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+                            if (audio.readyState >= 2) { // HAVE_CURRENT_DATA or better
                                 markAudioLoaded();
                             }
                         }, { once: true });
@@ -353,17 +487,29 @@
                     audio.addEventListener('error', handleError, { once: true });
 
                     // Check if already loaded
-                    if (audio.readyState >= 3) {
+                    if (audio.readyState >= 2) {
                         markAudioLoaded();
                     }
 
-                    // Fallback timeout
+                    // On mobile, be more lenient - mark as loaded even if not fully ready
+                    // Mobile browsers often block audio preloading until user interaction
+                    if (mobileDevice) {
+                        // Check after a short delay if metadata is loaded
+                        setTimeout(function() {
+                            if (!loaded && audio.readyState >= 1) { // HAVE_METADATA or better
+                                console.log('Audio ' + audioIndex + ' metadata loaded on mobile, proceeding');
+                                markAudioLoaded();
+                            }
+                        }, 1000);
+                    }
+
+                    // Fallback timeout - shorter on mobile
                     setTimeout(function() {
                         if (!loaded) {
-                            console.warn('Audio ' + audioIndex + ' loading timeout, proceeding anyway');
+                            console.warn('Audio ' + audioIndex + ' loading timeout, proceeding anyway (mobile-friendly)');
                             markAudioLoaded();
                         }
-                    }, 8000);
+                    }, audioTimeout);
                 });
             }
 
@@ -411,6 +557,12 @@
                 } catch(_){ }
                 
                 overlay.classList.add('hidden');
+                
+                // Show scanning guide when AR is active
+                var scanningGuide = document.getElementById('scanning-guide');
+                if (scanningGuide) {
+                    scanningGuide.classList.add('active');
+                }
             });
         })();
 
@@ -422,14 +574,51 @@
             var activeMarker = null;
             var persistenceTimer = null;
             var visibilityCheckInterval = null;
-            var PERSISTENCE_DURATION = 30000; // 30 seconds in milliseconds
+            var PERSISTENCE_DURATION = 20000; // 30 seconds in milliseconds
 
             function getAudioElement(marker) {
-                if (!marker || !marker.components || !marker.components.sound) return null;
-                var soundSrc = marker.components.sound.data.src;
-                if (soundSrc && soundSrc.startsWith('#')) {
-                    return document.querySelector(soundSrc);
+                if (!marker) return null;
+                
+                // Method 1: Get by marker value (most reliable)
+                var markerValue = marker.getAttribute('value');
+                if (markerValue === '1') {
+                    var audio1 = document.getElementById('audio1');
+                    if (audio1) return audio1;
+                } else if (markerValue === '2') {
+                    var audio2 = document.getElementById('audio2');
+                    if (audio2) return audio2;
                 }
+                
+                // Method 2: Try to get from sound component
+                if (marker.components && marker.components.sound) {
+                    var soundSrc = marker.components.sound.data.src;
+                    if (soundSrc && typeof soundSrc === 'string' && soundSrc.startsWith('#')) {
+                        var audioEl = document.querySelector(soundSrc);
+                        if (audioEl) return audioEl;
+                    }
+                }
+                
+                // Method 3: Try to get from sound attribute (if it's a string)
+                var soundAttr = marker.getAttribute('sound');
+                if (soundAttr && typeof soundAttr === 'string') {
+                    // Parse the sound attribute (format: "src: #audio1; ...")
+                    var srcMatch = soundAttr.match(/src:\s*([^;]+)/);
+                    if (srcMatch) {
+                        var src = srcMatch[1].trim();
+                        if (src.startsWith('#')) {
+                            var audioEl = document.querySelector(src);
+                            if (audioEl) return audioEl;
+                        }
+                    }
+                } else if (soundAttr && typeof soundAttr === 'object' && soundAttr.src) {
+                    // If soundAttr is an object (A-Frame component data), use src property
+                    var src = soundAttr.src;
+                    if (src && typeof src === 'string' && src.startsWith('#')) {
+                        var audioEl = document.querySelector(src);
+                        if (audioEl) return audioEl;
+                    }
+                }
+                
                 return null;
             }
 
@@ -477,6 +666,15 @@
                 }
             }
 
+            function getSongNameForMarker(marker) {
+                if (!marker) return 'Unknown Track';
+                var markerValue = marker.getAttribute('value');
+                var audioId = markerValue === '1' ? 'audio1' : (markerValue === '2' ? 'audio2' : null);
+                if (audioId === 'audio1') return 'Audio Track 1';
+                if (audioId === 'audio2') return 'Audio Track 2';
+                return 'Unknown Track';
+            }
+
             function handleMarkerFound(marker) {
                 // Clear any existing timers and intervals
                 if (persistenceTimer) {
@@ -499,36 +697,125 @@
                 // Show the marker's content
                 showMarker(marker);
                 
-                // Play audio - try both sound component and direct audio element
+                // Get audio element and song name for this marker
                 var audioEl = getAudioElement(marker);
+                var songName = getSongNameForMarker(marker);
+                
+                console.log('Marker detected:', {
+                    markerValue: marker.getAttribute('value'),
+                    audioEl: audioEl,
+                    songName: songName,
+                    hasUpdateFunction: typeof window.updateMusicPlayerForMarker === 'function',
+                    soundAttr: marker.getAttribute('sound')
+                });
+                
+                // If audioEl still not found, try one more time after a short delay
+                // (in case sound component initializes late)
+                if (!audioEl) {
+                    setTimeout(function() {
+                        var delayedAudioEl = getAudioElement(marker);
+                        if (delayedAudioEl && typeof window.updateMusicPlayerForMarker === 'function') {
+                            console.log('Got audio element on retry:', delayedAudioEl);
+                            window.updateMusicPlayerForMarker(delayedAudioEl, songName);
+                        }
+                    }, 200);
+                }
+                
+                // Step 1: Update music player FIRST with marker info (before playing audio)
+                // This ensures the player shows the correct track immediately
+                if (audioEl) {
+                    if (typeof window.updateMusicPlayerForMarker === 'function') {
+                        console.log('Updating music player with:', { audioEl: audioEl, songName: songName });
+                        window.updateMusicPlayerForMarker(audioEl, songName);
+                    } else {
+                        console.warn('updateMusicPlayerForMarker function not available yet, retrying...');
+                        // Retry after a short delay
+                        setTimeout(function() {
+                            if (typeof window.updateMusicPlayerForMarker === 'function' && audioEl) {
+                                window.updateMusicPlayerForMarker(audioEl, songName);
+                            }
+                        }, 100);
+                    }
+                } else {
+                    console.warn('No audio element found for marker');
+                }
+                
+                // Step 2: Play audio if sound is enabled
+                var soundOn = typeof window.soundEnabled !== 'undefined' ? window.soundEnabled : true;
+                
+                if (!soundOn) {
+                    console.log('Sound is disabled, not playing audio');
+                    return; // Don't play if sound is disabled
+                }
+                
+                // Play audio using the audio element directly
                 if (audioEl) {
                     try {
-                        audioEl.currentTime = 0; // Reset to start
-                        audioEl.play().catch(function(e) {
-                            // If direct play fails, try sound component
-                            if (marker.components && marker.components.sound) {
-                                try {
-                                    marker.components.sound.playSound();
-                                } catch(e2) {
-                                    if (window.ARDebug) ARDebug.error(e2);
+                        // Reset audio to start
+                        audioEl.currentTime = 0;
+                        
+                        // Play audio
+                        var playPromise = audioEl.play();
+                        
+                        if (playPromise !== undefined) {
+                            playPromise.then(function() {
+                                console.log('Audio started playing successfully');
+                                // Audio started playing successfully
+                                // Music player is already updated, just ensure it's tracking
+                                if (typeof window.ensureMusicPlayerTracking === 'function') {
+                                    window.ensureMusicPlayerTracking(audioEl);
                                 }
-                            }
-                        });
+                                // Also update again to be sure
+                                if (typeof window.updateMusicPlayerForMarker === 'function') {
+                                    window.updateMusicPlayerForMarker(audioEl, songName);
+                                }
+                            }).catch(function(error) {
+                                console.warn('Audio play() failed:', error);
+                                // Auto-play was prevented or failed
+                                // Try using sound component as fallback
+                                if (marker.components && marker.components.sound) {
+                                    try {
+                                        marker.components.sound.playSound();
+                                        // Update music player after sound component plays
+                                        if (audioEl && typeof window.updateMusicPlayerForMarker === 'function') {
+                                            window.updateMusicPlayerForMarker(audioEl, songName);
+                                        }
+                                    } catch(e) {
+                                        console.warn('Sound component playback failed:', e);
+                                    }
+                                }
+                            });
+                        }
                     } catch(e) {
-                        // Fallback to sound component
+                        console.warn('Audio play error:', e);
+                        // Fallback to sound component if direct play fails
                         if (marker.components && marker.components.sound) {
                             try {
                                 marker.components.sound.playSound();
+                                // Update music player after sound component plays
+                                if (audioEl && typeof window.updateMusicPlayerForMarker === 'function') {
+                                    window.updateMusicPlayerForMarker(audioEl, songName);
+                                }
                             } catch(e2) {
-                                if (window.ARDebug) ARDebug.error(e2);
+                                console.warn('Sound component playback failed:', e2);
                             }
                         }
                     }
                 } else if (marker.components && marker.components.sound) {
+                    // If no direct audio element, try sound component
                     try {
                         marker.components.sound.playSound();
+                        // Try to get audio element from sound component for music player
+                        var soundSrc = marker.components.sound.data.src;
+                        if (soundSrc && soundSrc.startsWith('#')) {
+                            var audioFromSound = document.querySelector(soundSrc);
+                            if (audioFromSound && typeof window.updateMusicPlayerForMarker === 'function') {
+                                console.log('Updating music player from sound component');
+                                window.updateMusicPlayerForMarker(audioFromSound, songName);
+                            }
+                        }
                     } catch(e) {
-                        if (window.ARDebug) ARDebug.error(e);
+                        console.warn('Sound component playback failed:', e);
                     }
                 }
             }
@@ -553,8 +840,9 @@
                 visibilityCheckInterval = setInterval(function() {
                     if (activeMarker === marker) {
                         showMarker(marker);
-                        // Keep audio playing if it was stopped by AR.js
-                        if (audioEl && audioEl.paused) {
+                        // Keep audio playing if it was stopped by AR.js and sound is enabled
+                        var soundOn = typeof window.soundEnabled !== 'undefined' ? window.soundEnabled : true;
+                        if (audioEl && audioEl.paused && soundOn) {
                             try {
                                 audioEl.play().catch(function(e) {
                                     // Ignore play errors (might be due to browser autoplay policies)
@@ -604,6 +892,383 @@
             if (document.readyState === 'complete') onLoaded();
             else window.addEventListener('load', onLoaded);
         })();
+
+        // Sound toggle functionality
+        (function(){
+            var soundToggle = document.getElementById('sound-toggle');
+            var aboutLink = document.getElementById('about-link');
+            // Make soundEnabled globally accessible for marker handlers
+            window.soundEnabled = true;
+            var audioElements = [document.getElementById('audio1'), document.getElementById('audio2')].filter(Boolean);
+            
+            // Function to toggle sound
+            function toggleSound() {
+                window.soundEnabled = !window.soundEnabled;
+                
+                // When turning sound off: pause and mute all audio elements
+                // When turning sound on: unmute (audio will play when markers are detected)
+                audioElements.forEach(function(audio) {
+                    if (audio) {
+                        if (window.soundEnabled) {
+                            // Turn sound on: unmute
+                            audio.muted = false;
+                        } else {
+                            // Turn sound off: pause and mute to stop browser tab sound indicator
+                            audio.pause();
+                            audio.muted = true;
+                        }
+                    }
+                });
+                
+                // Also stop any audio playing through marker sound components
+                var marker1 = document.querySelector("a-marker[type='barcode'][value='1']");
+                var marker2 = document.querySelector("a-marker[type='barcode'][value='2']");
+                
+                if (!window.soundEnabled) {
+                    // Stop audio from marker sound components
+                    [marker1, marker2].forEach(function(marker) {
+                        if (marker && marker.components && marker.components.sound) {
+                            try {
+                                marker.components.sound.stopSound();
+                            } catch(e) {
+                                // Ignore errors
+                            }
+                        }
+                    });
+                }
+                
+                // Update button text and appearance
+                if (window.soundEnabled) {
+                    soundToggle.textContent = '🔊 Sound On';
+                    soundToggle.classList.remove('sound-off');
+                } else {
+                    soundToggle.textContent = '🔇 Sound Off';
+                    soundToggle.classList.add('sound-off');
+                }
+            }
+            
+            // Add click event listener
+            if (soundToggle) {
+                soundToggle.addEventListener('click', toggleSound);
+            }
+            
+            // About link handler (you can customize this)
+            if (aboutLink) {
+                aboutLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('AR Demo - Marker Tracking\n\nThis demo uses AR.js to track barcode markers and display 3D models with audio.');
+                });
+            }
+        })();
+
+        // Music player control
+        (function(){
+            // Expose functions immediately, even before DOM elements are ready
+            // This ensures they're available when markers are detected
+            var musicPlayer = null;
+            var songNameEl = null;
+            var progressBar = null;
+            var progressContainer = null;
+            var playPauseBtn = null;
+            
+            var currentAudio = null;
+            var progressUpdateInterval = null;
+            var isPaused = false;
+            
+            // Song names mapping
+            var songNames = {
+                'audio1': 'Audio Track 1',
+                'audio2': 'Audio Track 2'
+            };
+            
+            // Initialize DOM elements
+            function initDOMElements() {
+                if (!musicPlayer) musicPlayer = document.getElementById('music-player');
+                if (!songNameEl) songNameEl = document.getElementById('music-player-song-name');
+                if (!progressBar) progressBar = document.getElementById('music-player-progress-bar');
+                if (!progressContainer) progressContainer = document.getElementById('music-player-progress-container');
+                if (!playPauseBtn) playPauseBtn = document.getElementById('music-player-play-pause');
+            }
+            
+            // Try to initialize immediately
+            initDOMElements();
+            
+            // Also try after DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initDOMElements);
+            }
+            
+            // And after a short delay to be safe
+            setTimeout(initDOMElements, 100);
+            
+            // Expose functions immediately (before they're fully defined)
+            // This ensures they're available as soon as possible
+            window.updateMusicPlayerForMarker = function(audioElement, songName) {
+                initDOMElements();
+                
+                console.log('updateMusicPlayerForMarker called:', {
+                    audioElement: audioElement,
+                    songName: songName,
+                    musicPlayer: musicPlayer
+                });
+                
+                if (!audioElement) {
+                    console.warn('updateMusicPlayerForMarker: No audio element provided');
+                    return;
+                }
+                if (!musicPlayer) {
+                    console.warn('updateMusicPlayerForMarker: Music player not ready, will retry');
+                    setTimeout(function() {
+                        initDOMElements();
+                        if (musicPlayer && audioElement) {
+                            console.log('Retry: Updating music player');
+                            showMusicPlayer(audioElement, songName);
+                        } else {
+                            console.warn('Retry failed: musicPlayer or audioElement still not available');
+                        }
+                    }, 100);
+                    return;
+                }
+                console.log('Calling showMusicPlayer');
+                showMusicPlayer(audioElement, songName);
+            };
+            
+            // Function to show music player
+            function showMusicPlayer(audioElement, songName) {
+                // Ensure DOM elements are initialized
+                initDOMElements();
+                
+                console.log('showMusicPlayer called:', {
+                    audioElement: audioElement,
+                    songName: songName,
+                    musicPlayer: musicPlayer,
+                    songNameEl: songNameEl
+                });
+                
+                if (!musicPlayer) {
+                    console.warn('Music player element not found, retrying...');
+                    // Retry after a short delay
+                    setTimeout(function() {
+                        initDOMElements();
+                        if (musicPlayer && audioElement) {
+                            showMusicPlayer(audioElement, songName);
+                        }
+                    }, 100);
+                    return;
+                }
+                if (!audioElement) {
+                    console.warn('Audio element not provided to showMusicPlayer');
+                    return;
+                }
+                
+                currentAudio = audioElement;
+                if (songNameEl) {
+                    songNameEl.textContent = songName || 'Unknown Track';
+                    console.log('Updated song name to:', songName);
+                }
+                musicPlayer.classList.add('active');
+                console.log('Music player set to active');
+                updatePlayPauseButton();
+                startProgressUpdate();
+                
+                // Force immediate progress update
+                updateProgress();
+            }
+            
+            // Function to hide music player
+            function hideMusicPlayer() {
+                if (!musicPlayer) return;
+                musicPlayer.classList.remove('active');
+                currentAudio = null;
+                stopProgressUpdate();
+            }
+            
+            // Function to update progress bar
+            function updateProgress() {
+                if (!currentAudio || !progressBar) return;
+                
+                if (currentAudio.duration && currentAudio.duration > 0) {
+                    var percent = (currentAudio.currentTime / currentAudio.duration) * 100;
+                    progressBar.style.width = percent + '%';
+                }
+                
+                // Keep player visible even when audio ends - don't hide it
+            }
+            
+            // Start progress update interval
+            function startProgressUpdate() {
+                stopProgressUpdate();
+                // Keep updating progress even when paused/ended to show current position
+                progressUpdateInterval = setInterval(updateProgress, 100);
+            }
+            
+            // Stop progress update interval
+            function stopProgressUpdate() {
+                if (progressUpdateInterval) {
+                    clearInterval(progressUpdateInterval);
+                    progressUpdateInterval = null;
+                }
+            }
+            
+            // Update play/pause button
+            function updatePlayPauseButton() {
+                if (!playPauseBtn || !currentAudio) return;
+                
+                if (currentAudio.paused || isPaused || currentAudio.ended) {
+                    playPauseBtn.textContent = '▶';
+                } else {
+                    playPauseBtn.textContent = '⏸';
+                }
+            }
+            
+            // Handle play/pause button click
+            if (playPauseBtn) {
+                playPauseBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    if (!currentAudio) return;
+                    
+                    if (currentAudio.paused || isPaused || currentAudio.ended) {
+                        // If audio ended, restart from beginning
+                        if (currentAudio.ended) {
+                            currentAudio.currentTime = 0;
+                        }
+                        currentAudio.play().catch(function(err) {
+                            console.warn('Could not play audio:', err);
+                        });
+                        isPaused = false;
+                        if (!progressUpdateInterval) {
+                            startProgressUpdate();
+                        }
+                    } else {
+                        currentAudio.pause();
+                        isPaused = true;
+                    }
+                    updatePlayPauseButton();
+                });
+            }
+            
+            // Handle progress bar click to seek
+            if (progressContainer) {
+                progressContainer.addEventListener('click', function(e) {
+                    if (!currentAudio || !currentAudio.duration) return;
+                    
+                    var rect = progressContainer.getBoundingClientRect();
+                    var clickX = e.clientX - rect.left;
+                    var percent = clickX / rect.width;
+                    var newTime = percent * currentAudio.duration;
+                    
+                    currentAudio.currentTime = Math.max(0, Math.min(newTime, currentAudio.duration));
+                    updateProgress();
+                });
+            }
+            
+            // Secondary function: Ensure player is tracking the audio (called after audio starts)
+            window.ensureMusicPlayerTracking = function(audioElement) {
+                if (!audioElement || currentAudio !== audioElement) {
+                    // If not tracking this audio, update to track it
+                    // But don't change song name if already set
+                    if (audioElement) {
+                        currentAudio = audioElement;
+                        updatePlayPauseButton();
+                        if (!progressUpdateInterval) {
+                            startProgressUpdate();
+                        }
+                    }
+                } else {
+                    // Already tracking, just ensure progress updates are running
+                    if (!progressUpdateInterval) {
+                        startProgressUpdate();
+                    }
+                    updatePlayPauseButton();
+                }
+            };
+            
+            // Legacy function for backward compatibility
+            window.showMusicPlayer = function(audioElement, songName) {
+                showMusicPlayer(audioElement, songName);
+            };
+            
+            window.hideMusicPlayer = function() {
+                hideMusicPlayer();
+            };
+            
+            window.updateMusicPlayerProgress = function() {
+                updateProgress();
+            };
+            
+            // Listen to audio events for state updates (secondary to marker detection)
+            var audio1 = document.getElementById('audio1');
+            var audio2 = document.getElementById('audio2');
+            
+            [audio1, audio2].forEach(function(audio, index) {
+                if (!audio) return;
+                
+                // When audio starts playing, ensure player is tracking it
+                audio.addEventListener('play', function() {
+                    console.log('Audio play event:', {
+                        audioId: 'audio' + (index + 1),
+                        currentAudio: currentAudio,
+                        audio: audio
+                    });
+                    
+                    // Always update music player when audio plays
+                    // This ensures it's updated even if marker detection missed it
+                    var songName = songNames['audio' + (index + 1)] || 'Audio Track ' + (index + 1);
+                    
+                    if (currentAudio !== audio) {
+                        // If player isn't tracking this audio, update it
+                        console.log('Updating music player for new audio:', songName);
+                        showMusicPlayer(audio, songName);
+                    } else {
+                        // Already tracking, but ensure it's visible and updated
+                        console.log('Audio already tracked, ensuring player is active');
+                        if (musicPlayer) {
+                            musicPlayer.classList.add('active');
+                        }
+                        if (songNameEl) {
+                            songNameEl.textContent = songName;
+                        }
+                        isPaused = false;
+                        updatePlayPauseButton();
+                    }
+                    
+                    // Ensure progress updates are running
+                    if (!progressUpdateInterval) {
+                        startProgressUpdate();
+                    }
+                });
+                
+                // Update button state when paused
+                audio.addEventListener('pause', function() {
+                    if (currentAudio === audio && audio.currentTime > 0) {
+                        isPaused = true;
+                        updatePlayPauseButton();
+                    }
+                });
+                
+                // Keep player visible when audio ends
+                audio.addEventListener('ended', function() {
+                    if (currentAudio === audio) {
+                        isPaused = true;
+                        updatePlayPauseButton();
+                        // Keep progress update running to show final position
+                        if (!progressUpdateInterval) {
+                            startProgressUpdate();
+                        }
+                    }
+                });
+                
+                // Update progress bar as audio plays
+                audio.addEventListener('timeupdate', function() {
+                    if (currentAudio === audio) {
+                        updateProgress();
+                    }
+                });
+            });
+        })();
         </script>
     </body>
 </html>
+

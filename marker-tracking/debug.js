@@ -57,7 +57,7 @@
   }
 
   // Basic styles
-  var style = el('style', null, "\n.__ar_dbg_toggle{position:fixed;left:12px;bottom:12px;z-index:2147483000;background:#111;color:#fff;border:1px solid #333;border-radius:6px;padding:8px 10px;font:12px/1.2 system-ui,Segoe UI,Roboto,Helvetica,Arial,Apple Color Emoji,Segoe UI Emoji;cursor:pointer;opacity:.8}.__ar_dbg_toggle:hover{opacity:1}\n.__ar_dbg_panel{position:fixed;left:12px;bottom:48px;width:340px;max-height:55vh;z-index:2147483000;background:#0b0b0c;color:#f2f2f2;border:1px solid #333;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.35);display:none;overflow:hidden;font:12px/1.3 system-ui,Segoe UI,Roboto,Helvetica,Arial}\n.__ar_dbg_header{display:flex;align-items:center;justify-content:space-between;background:#141416;border-bottom:1px solid #2a2a2e;padding:6px 8px;cursor:move}\n.__ar_dbg_tabs{display:flex;gap:6px}\n.__ar_dbg_tab{padding:4px 8px;border:1px solid #2a2a2e;border-radius:5px;background:#1a1b1e;color:#d9d9dc;cursor:pointer}.__ar_dbg_tab.__active{background:#2a2b30;color:#fff;border-color:#3a3b40}\n.__ar_dbg_body{background:#0f1012;padding:8px;overflow:auto;max-height:calc(55vh - 38px)}\n.__ar_dbg_logs{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;font-size:11px}\n.__ar_dbg_log.__info{color:#cfe3ff}\n.__ar_dbg_log.__warn{color:#ffe08a}\n.__ar_dbg_log.__error{color:#ffb0b0}\n.__ar_dbg_row{display:flex;align-items:center;justify-content:space-between;gap:8px}\n.__ar_dbg_stat{font-family:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace}\n.__ar_dbg_marker{display:inline-block;margin:2px 6px 2px 0;padding:2px 6px;border-radius:4px;background:#1e2127;border:1px solid #343840}\n");
+  var style = el('style', null, "\n.__ar_dbg_toggle{position:fixed;left:12px;bottom:12px;z-index:2147483000;background:#111;color:#fff;border:1px solid #333;border-radius:6px;padding:8px 10px;font:12px/1.2 system-ui,Segoe UI,Roboto,Helvetica,Arial,Apple Color Emoji,Segoe UI Emoji;cursor:pointer;opacity:.8}.__ar_dbg_toggle:hover{opacity:1}\n.__ar_dbg_panel{position:fixed;left:12px;bottom:48px;width:340px;max-height:55vh;z-index:2147483000;background:#0b0b0c;color:#f2f2f2;border:1px solid #333;border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.35);display:none;overflow:hidden;font:12px/1.3 system-ui,Segoe UI,Roboto,Helvetica,Arial}\n.__ar_dbg_header{display:flex;align-items:center;justify-content:space-between;background:#141416;border-bottom:1px solid #2a2a2e;padding:6px 8px;cursor:move}\n.__ar_dbg_tabs{display:flex;gap:6px}\n.__ar_dbg_tab{padding:4px 8px;border:1px solid #2a2a2e;border-radius:5px;background:#1a1b1e;color:#d9d9dc;cursor:pointer}.__ar_dbg_tab.__active{background:#2a2b30;color:#fff;border-color:#3a3b40}\n.__ar_dbg_body{background:#0f1012;padding:8px;overflow:auto;max-height:calc(55vh - 38px)}\n.__ar_dbg_logs{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;font-size:11px}\n.__ar_dbg_log.__info{color:#cfe3ff}\n.__ar_dbg_log.__warn{color:#ffe08a}\n.__ar_dbg_log.__error{color:#ffb0b0}\n.__ar_dbg_row{display:flex;align-items:center;justify-content:space-between;gap:8px}\n.__ar_dbg_stat{font-family:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace}\n.__ar_dbg_marker{display:inline-block;margin:2px 6px 2px 0;padding:2px 6px;border-radius:4px;background:#1e2127;border:1px solid #343840}\n.__ar_dbg_pos{margin-top:4px;font-family:ui-monospace,SFMono-Regular,Consolas,Menlo,monospace;font-size:10px;color:#9ca3af;word-break:break-all}\n");
   document.head.appendChild(style);
 
   // UI Elements
@@ -75,9 +75,11 @@
   var logsView = el('div', { class: '__ar_dbg_logs' });
   var statsView = el('div');
   var markersView = el('div');
+  var posView = el('div', { class: '__ar_dbg_pos' });
   body.appendChild(logsView);
   body.appendChild(statsView);
   body.appendChild(markersView);
+  body.appendChild(posView);
   panel.appendChild(header);
   panel.appendChild(body);
   document.body.appendChild(toggleBtn);
@@ -197,7 +199,7 @@
     statsView.appendChild(row);
   }
 
-  // Marker tracking (A-Frame + AR.js)
+  // Marker tracking (A-Frame + AR.js) + position tracking
   function setupMarkerTracking() {
     try {
       var scene = document.querySelector('a-scene');
@@ -217,8 +219,16 @@
       var markers = Array.prototype.slice.call(scene.querySelectorAll('a-marker'));
       markers.forEach(function (m) {
         var id = markerId(m);
-        var onFound = function () { state.visibleMarkerIds.add(id); pushLog('info', ['markerFound', id]); if (state.activeTab === 'markers') renderMarkers(); };
-        var onLost = function () { state.visibleMarkerIds.delete(id); pushLog('info', ['markerLost', id]); if (state.activeTab === 'markers') renderMarkers(); };
+        var onFound = function () {
+          state.visibleMarkerIds.add(id);
+          pushLog('info', ['markerFound', id]);
+          if (state.activeTab === 'markers') renderMarkers();
+        };
+        var onLost = function () {
+          state.visibleMarkerIds.delete(id);
+          pushLog('info', ['markerLost', id]);
+          if (state.activeTab === 'markers') renderMarkers();
+        };
         m.addEventListener('markerFound', onFound);
         m.addEventListener('markerLost', onLost);
         state.unsubscribers.push(function () {
@@ -226,6 +236,9 @@
           m.removeEventListener('markerLost', onLost);
         });
       });
+
+      // Mouse + model position tracking (for current scene)
+      setupPositionTracking(scene);
 
       renderMarkers();
     } catch (e) {
@@ -247,6 +260,118 @@
     state.visibleMarkerIds.forEach(function (id) {
       markersView.appendChild(el('span', { class: '__ar_dbg_marker' }, String(id)));
     });
+  }
+
+  // Mouse + model/world position tracking
+  function setupPositionTracking(scene) {
+    try {
+      var cameraEl = scene.querySelector('a-entity[camera], a-camera');
+      var modelEl = scene.querySelector('#animated-marker a-entity[gltf-model], a-marker[value="2"] a-entity[gltf-model]');
+      var raycaster = null;
+
+      function ensureRaycaster() {
+        if (raycaster || !(window.THREE && scene.object3D)) return;
+        raycaster = new THREE.Raycaster();
+      }
+
+      function screenToNDC(x, y) {
+        var w = window.innerWidth || 1;
+        var h = window.innerHeight || 1;
+        return {
+          x: (x / w) * 2 - 1,
+          y: -(y / h) * 2 + 1
+        };
+      }
+
+      function updatePositionText(extra) {
+        if (!posView) return;
+
+        var parts = [];
+
+        // Mouse
+        if (state.lastMouse) {
+          parts.push(
+            'Mouse: x=' + state.lastMouse.x +
+            ', y=' + state.lastMouse.y +
+            ', ndc=(' + state.lastMouse.ndcX.toFixed(3) + ', ' + state.lastMouse.ndcY.toFixed(3) + ')'
+          );
+        } else {
+          parts.push('Mouse: (move pointer over viewport)');
+        }
+
+        // Camera
+        if (cameraEl) {
+          var cPos = cameraEl.object3D && cameraEl.object3D.getWorldPosition
+            ? cameraEl.object3D.getWorldPosition(new THREE.Vector3())
+            : null;
+          if (cPos) {
+            parts.push(
+              'Camera: (' +
+              cPos.x.toFixed(3) + ', ' +
+              cPos.y.toFixed(3) + ', ' +
+              cPos.z.toFixed(3) + ')'
+            );
+          }
+        }
+
+        // Model (on barcode 2)
+        if (modelEl && modelEl.object3D) {
+          var mPos = modelEl.object3D.getWorldPosition
+            ? modelEl.object3D.getWorldPosition(new THREE.Vector3())
+            : null;
+          if (mPos) {
+            parts.push(
+              'Model[value=2]: (' +
+              mPos.x.toFixed(3) + ', ' +
+              mPos.y.toFixed(3) + ', ' +
+              mPos.z.toFixed(3) + ')'
+            );
+          }
+        }
+
+        if (extra) {
+          parts.push(extra);
+        }
+
+        posView.textContent = parts.join('  |  ');
+      }
+
+      // Mouse move listener
+      state.lastMouse = null;
+      window.addEventListener('mousemove', function (e) {
+        ensureRaycaster();
+        var ndc = screenToNDC(e.clientX, e.clientY);
+        state.lastMouse = {
+          x: e.clientX,
+          y: e.clientY,
+          ndcX: ndc.x,
+          ndcY: ndc.y
+        };
+
+        // Optionally compute intersection along camera ray (if available)
+        if (raycaster && cameraEl && cameraEl.object3D && cameraEl.object3D.el) {
+          var threeCam = cameraEl.getObject3D('camera') || scene.camera;
+          if (threeCam) {
+            raycaster.setFromCamera({ x: ndc.x, y: ndc.y }, threeCam);
+          }
+        }
+
+        if (state.isOpen) {
+          updatePositionText();
+        }
+      });
+
+      // Tie into render loop to keep positions fresh while panel open
+      function tick() {
+        if (state.isOpen) {
+          updatePositionText();
+        }
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    } catch (e) {
+      pushLog('error', ['setupPositionTracking failed', e]);
+    }
   }
 
   // Public API

@@ -14,6 +14,8 @@
         #progress-text { font-size: 11px; opacity: .7; margin-top: 6px; text-align: center; }
         #setup-btn { appearance: none; border: 1px solid #3a3b40; background: #1a1b1e; color: #fff; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; margin-top: 8px; }
         #setup-btn:disabled { opacity: .6; cursor: default; }
+        #raycast-circle { position: fixed; width: 100px; height: 100px; border: 4px solid #4a9eff; border-radius: 50%; pointer-events: none; z-index: 10000; transform: translate(-50%, -50%); opacity: 1; transition: opacity 0.2s ease, transform 0.1s ease; box-shadow: 0 0 20px rgba(74, 158, 255, 0.6); left: 50%; top: 50%; }
+        #raycast-circle::before { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 16px; height: 16px; background: #4a9eff; border-radius: 50%; }
         </style>
     </head>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
@@ -35,6 +37,7 @@
             </div>
             <button id="setup-btn" disabled>Tap to start</button>
         </div>
+        <div id="raycast-circle"></div>
         <a-scene 
         vr-mode-ui="enabled: false;"
         renderer="logarithmicDepthBuffer: true;"
@@ -66,7 +69,7 @@
         </a-marker>
 
         <!-- use this <a-entity camera> to support multiple-markers, otherwise use <a-marker-camera> instead of </a-marker> -->
-        <a-entity camera></a-entity>
+        <a-entity camera raycaster="objects: #box-model, #animated-model"></a-entity>
         </a-scene>
         <script src="./debug.js"></script>
         <script>
@@ -272,50 +275,173 @@
             var marker2Visible = false;
             var raycaster = null;
             var camera = null;
+            var raycastCircle = document.getElementById('raycast-circle');
+
+            // Function to get canvas dimensions from A-Frame renderer
+            function getCanvasSize() {
+                // Try to get canvas from A-Frame scene
+                var canvas = scene.canvas || (scene.renderer && scene.renderer.domElement);
+                if (canvas) {
+                    // Use the actual renderer size if available, otherwise use canvas dimensions
+                    var renderer = scene.renderer;
+                    if (renderer && renderer.getSize) {
+                        var size = new THREE.Vector2();
+                        renderer.getSize(size);
+                        return { width: size.width, height: size.height };
+                    }
+                    // Fallback to canvas dimensions
+                    return { 
+                        width: canvas.width || canvas.clientWidth || window.innerWidth, 
+                        height: canvas.height || canvas.clientHeight || window.innerHeight 
+                    };
+                }
+                // Fallback to window dimensions
+                return { width: window.innerWidth, height: window.innerHeight };
+            }
 
             // Function to check which model is touched using raycasting
             function getTouchedModel(touchX, touchY) {
-                if (!raycaster || !camera || !window.THREE) return null;
+                if (!raycaster || !camera || !window.THREE) {
+                    console.log('Raycaster not ready:', { raycaster: !!raycaster, camera: !!camera, THREE: !!window.THREE });
+                    return null;
+                }
 
-                // Convert screen coordinates to normalized device coordinates
+                // Get actual canvas dimensions
+                var canvasSize = getCanvasSize();
+                var canvasWidth = canvasSize.width;
+                var canvasHeight = canvasSize.height;
+
+                // For AR.js embedded scenes, use touch coordinates directly
+                // The canvas is typically fullscreen and coordinates match viewport
+                var canvasX = touchX;
+                var canvasY = touchY;
+
+                // Ensure coordinates are within canvas bounds
+                canvasX = Math.max(0, Math.min(canvasX, canvasWidth));
+                canvasY = Math.max(0, Math.min(canvasY, canvasHeight));
+
+                // Convert canvas coordinates to normalized device coordinates (-1 to 1)
                 var mouse = new THREE.Vector2();
-                mouse.x = (touchX / window.innerWidth) * 2 - 1;
-                mouse.y = -(touchY / window.innerHeight) * 2 + 1;
+                mouse.x = (canvasX / canvasWidth) * 2 - 1;
+                mouse.y = -(canvasY / canvasHeight) * 2 + 1;
+
+                console.log('Raycast coords:', { touchX, touchY, canvasX, canvasY, mouseX: mouse.x, mouseY: mouse.y, canvasWidth, canvasHeight });
 
                 // Update raycaster
                 raycaster.setFromCamera(mouse, camera);
+                
+                // Debug: Log raycast origin and direction
+                var ray = raycaster.ray;
+                console.log('Raycast ray:', {
+                    origin: { x: ray.origin.x.toFixed(3), y: ray.origin.y.toFixed(3), z: ray.origin.z.toFixed(3) },
+                    direction: { x: ray.direction.x.toFixed(3), y: ray.direction.y.toFixed(3), z: ray.direction.z.toFixed(3) }
+                });
+                
+                // Debug: Log camera position and rotation
+                if (camera) {
+                    var camPos = camera.position;
+                    var camRot = camera.rotation;
+                    console.log('Camera:', {
+                        position: { x: camPos.x.toFixed(3), y: camPos.y.toFixed(3), z: camPos.z.toFixed(3) },
+                        rotation: { x: camRot.x.toFixed(3), y: camRot.y.toFixed(3), z: camRot.z.toFixed(3) }
+                    });
+                }
 
-                // Check intersection with models
+                // Check intersection with models - test all models regardless of marker visibility
                 var objectsToTest = [];
-                if (marker1Visible && boxModel && boxModel.object3D) {
+                
+                // Check box model - only test actual mesh objects
+                if (boxModel && boxModel.object3D) {
+                    console.log('Checking boxModel:', { hasObject3D: !!boxModel.object3D, visible: boxModel.object3D.visible });
                     boxModel.object3D.traverse(function(child) {
-                        if (child.isMesh) {
+                        // Only test Mesh and SkinnedMesh objects, not Groups, Bones, or Object3D
+                        if (child.isMesh || child.isSkinnedMesh) {
                             objectsToTest.push(child);
+                            console.log('Added box mesh to test:', child.type, child.name || 'unnamed');
                         }
                     });
                 }
-                if (marker2Visible && animatedModel && animatedModel.object3D) {
+                
+                // Check animated model - only test actual mesh objects
+                if (animatedModel && animatedModel.object3D) {
+                    console.log('Checking animatedModel:', { hasObject3D: !!animatedModel.object3D, visible: animatedModel.object3D.visible });
                     animatedModel.object3D.traverse(function(child) {
-                        if (child.isMesh) {
+                        // Only test Mesh and SkinnedMesh objects, not Groups, Bones, or Object3D
+                        if (child.isMesh || child.isSkinnedMesh) {
                             objectsToTest.push(child);
+                            console.log('Added animated mesh to test:', child.type, child.name || 'unnamed');
                         }
                     });
                 }
 
+                console.log('Total objects to test:', objectsToTest.length);
+
+                if (objectsToTest.length === 0) {
+                    console.log('No objects to test for raycast');
+                    return null;
+                }
+
+                // Set raycaster parameters for better detection
+                raycaster.near = 0.01;
+                raycaster.far = 1000;
+                
                 var intersects = raycaster.intersectObjects(objectsToTest, true);
+                console.log('Raycast intersects:', intersects.length);
+                
+                // Debug: Log object positions if no intersections
+                if (intersects.length === 0 && objectsToTest.length > 0) {
+                    objectsToTest.forEach(function(obj, idx) {
+                        var worldPos = new THREE.Vector3();
+                        obj.getWorldPosition(worldPos);
+                        var distance = ray.origin.distanceTo(worldPos);
+                        var toObject = new THREE.Vector3().subVectors(worldPos, ray.origin).normalize();
+                        var dot = ray.direction.dot(toObject);
+                        console.log('Object ' + idx + ':', {
+                            worldPos: { x: worldPos.x.toFixed(3), y: worldPos.y.toFixed(3), z: worldPos.z.toFixed(3) },
+                            distance: distance.toFixed(3),
+                            directionToObject: { x: toObject.x.toFixed(3), y: toObject.y.toFixed(3), z: toObject.z.toFixed(3) },
+                            dotProduct: dot.toFixed(3) // Should be close to 1 if ray points at object
+                        });
+                    });
+                }
+                
                 if (intersects.length > 0) {
+                    console.log('Intersection details:', intersects[0]);
                     var intersectedObject = intersects[0].object;
                     // Find which model this object belongs to
                     var parent = intersectedObject;
-                    while (parent) {
+                    var depth = 0;
+                    while (parent && depth < 10) {
                         if (parent.el) {
-                            if (parent.el === boxModel) return 'box';
-                            if (parent.el === animatedModel) return 'animated';
+                            console.log('Found parent.el:', parent.el.id || parent.el.tagName);
+                            if (parent.el === boxModel || (marker1 && parent.el === marker1)) {
+                                console.log('Hit box model');
+                                return { model: 'box', intersect: intersects[0] };
+                            }
+                            if (parent.el === animatedModel || (marker2 && parent.el === marker2)) {
+                                console.log('Hit animated model');
+                                return { model: 'animated', intersect: intersects[0] };
+                            }
                         }
                         parent = parent.parent;
+                        depth++;
                     }
+                    console.log('Intersection found but couldn\'t identify model');
+                } else {
+                    console.log('No intersections found');
                 }
                 return null;
+            }
+
+            // Function to update raycast circle position
+            function updateRaycastCircle(touchX, touchY) {
+                if (!raycastCircle) return;
+                
+                // Always show circle, update position if coordinates provided
+                if (touchX > 0 && touchY > 0) {
+                    raycastCircle.style.left = touchX + 'px';
+                    raycastCircle.style.top = touchY + 'px';
+                }
             }
 
             // Function to play sound when model is touched
@@ -324,21 +450,55 @@
                 if (window.THREE && scene.object3D) {
                     raycaster = new THREE.Raycaster();
                     var cameraEl = scene.querySelector('a-entity[camera], a-camera');
-                    if (cameraEl && cameraEl.getObject3D('camera')) {
-                        camera = cameraEl.getObject3D('camera');
+                    if (cameraEl) {
+                        // Wait for camera component to be initialized
+                        if (cameraEl.getObject3D('camera')) {
+                            camera = cameraEl.getObject3D('camera');
+                        } else {
+                            cameraEl.addEventListener('componentinitialized', function(e) {
+                                if (e.detail.name === 'camera' && cameraEl.getObject3D('camera')) {
+                                    camera = cameraEl.getObject3D('camera');
+                                }
+                            });
+                        }
                     }
                 }
 
-                // Play sound when model is touched
-                scene.addEventListener('onefingerstart', function(event) {
-                    if (!event.detail || !event.detail.positionRaw) return;
+                // Update raycast circle on touch move - always visible
+                scene.addEventListener('onefingermove', function(event) {
+                    if (!event.detail || !event.detail.positionRaw) {
+                        return;
+                    }
 
-                    var touchedModel = getTouchedModel(
+                    // Update circle position when touching
+                    updateRaycastCircle(
                         event.detail.positionRaw.x,
                         event.detail.positionRaw.y
                     );
+                });
 
-                    if (touchedModel === 'box' && audio1 && marker1Visible) {
+                // Track mouse movement for desktop (circle always visible)
+                var canvas = scene.canvas || (scene.renderer && scene.renderer.domElement);
+                if (canvas) {
+                    canvas.addEventListener('mousemove', function(event) {
+                        updateRaycastCircle(event.clientX, event.clientY);
+                    });
+                } else {
+                    // Fallback to document if canvas not available
+                    document.addEventListener('mousemove', function(event) {
+                        updateRaycastCircle(event.clientX, event.clientY);
+                    });
+                }
+
+                // Function to handle model touch/click
+                function handleModelInteraction(x, y) {
+                    console.log('Handling interaction at:', x, y);
+                    var result = getTouchedModel(x, y);
+                    console.log('Raycast result:', result);
+
+                    // Play sound if touching a model (check marker visibility)
+                    if (result && result.model === 'box' && audio1 && marker1Visible) {
+                        console.log('Playing audio1 for box model');
                         try {
                             audio1.muted = false;
                             audio1.currentTime = 0;
@@ -348,7 +508,8 @@
                         } catch(e) {
                             console.warn('Error playing audio1:', e);
                         }
-                    } else if (touchedModel === 'animated' && audio2 && marker2Visible) {
+                    } else if (result && result.model === 'animated' && audio2 && marker2Visible) {
+                        console.log('Playing audio2 for animated model');
                         try {
                             audio2.muted = false;
                             audio2.currentTime = 0;
@@ -358,8 +519,49 @@
                         } catch(e) {
                             console.warn('Error playing audio2:', e);
                         }
+                    } else {
+                        console.log('No sound played. Result:', result, 'marker1Visible:', marker1Visible, 'marker2Visible:', marker2Visible);
                     }
+                }
+
+                // Play sound when model is touched
+                scene.addEventListener('onefingerstart', function(event) {
+                    if (!event.detail || !event.detail.positionRaw) return;
+
+                    // Update circle position when touch starts
+                    updateRaycastCircle(
+                        event.detail.positionRaw.x,
+                        event.detail.positionRaw.y
+                    );
+
+                    handleModelInteraction(
+                        event.detail.positionRaw.x,
+                        event.detail.positionRaw.y
+                    );
                 });
+
+                // Add click support for desktop - wait for canvas to be ready
+                function setupClickHandler() {
+                    var canvas = scene.canvas || (scene.renderer && scene.renderer.domElement);
+                    if (canvas) {
+                        canvas.addEventListener('click', function(event) {
+                            handleModelInteraction(event.clientX, event.clientY);
+                        });
+                        console.log('Click handler added to canvas');
+                    } else {
+                        // Fallback to document if canvas not available
+                        document.addEventListener('click', function(event) {
+                            handleModelInteraction(event.clientX, event.clientY);
+                        });
+                        console.log('Click handler added to document');
+                    }
+                }
+                
+                // Try to setup click handler immediately
+                setupClickHandler();
+                
+                // Also try after a short delay in case canvas isn't ready yet
+                setTimeout(setupClickHandler, 500);
             }
 
             // Track marker visibility
@@ -421,3 +623,4 @@
         </script>
     </body>
 </html>
+

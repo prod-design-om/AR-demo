@@ -1,5 +1,3 @@
-<!-- This is working with audio timestamps marker detection this is MVP -->
-
 
 <!doctype HTML>
 <html>
@@ -32,9 +30,95 @@
         }
         
         /* Navbar styles */
-        #navbar { position: fixed; top: 0; left: 0; right: 0; height: 50px; background: #000; display: flex; align-items: center; justify-content: flex-start; padding: 0 20px; z-index: 2147482999; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        #navbar { position: fixed; top: 0; left: 0; right: 0; height: 50px; background: #000; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 2147482999; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         #navbar a { color: #fff; text-decoration: none; font-size: 16px; font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial; transition: opacity 0.2s; }
         #navbar a:hover { opacity: 0.7; }
+        
+        /* Help Modal styles */
+        #help-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2147483000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        
+        #help-modal-overlay.active {
+            display: flex;
+        }
+        
+        #help-modal {
+            background: #1a1a1a;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        #help-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        #help-modal h2 {
+            color: #fff;
+            font-size: 24px;
+            font-weight: 600;
+            font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial;
+            margin: 0;
+        }
+        
+        #help-modal-close {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        
+        #help-modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        #help-modal-content {
+            color: #e0e0e0;
+            font-size: 15px;
+            line-height: 1.6;
+            font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial;
+        }
+        
+        #help-modal-content ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        #help-modal-content li {
+            margin-bottom: 12px;
+        }
+        
+        #help-modal-content li:last-child {
+            margin-bottom: 0;
+        }
         
         /* Marker count bar */
         #marker-count-bar { position: fixed; top: 50px; left: 0; right: 0; height: 35px; background: rgba(0, 0, 0, 0.8); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 2147482998; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
@@ -155,6 +239,24 @@
         #music-player-info { 
             flex: 1; 
             min-width: 0; 
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        #music-player-main-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            flex-direction: row-reverse;
+        }
+        
+        #music-player-text-section {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
         
         #music-player-song-name { 
@@ -162,12 +264,14 @@
             font-size: 18px; 
             font-weight: 600; 
             font-family: system-ui,Segoe UI,Roboto,Helvetica,Arial; 
-            margin-bottom: 12px; 
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis;
-            line-height: 1.3;
+            margin: 0;
+            white-space: normal; 
+            overflow: visible; 
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            line-height: 1.4;
             transition: opacity 0.3s ease;
+            max-width: 100%;
         }
         
         #music-player-song-name.updating {
@@ -201,9 +305,10 @@
         
         #music-player-controls { 
             display: flex; 
-            align-items: center; 
-            justify-content: center;
-            margin-top: 4px;
+            align-items: flex-start; 
+            justify-content: flex-end;
+            flex-shrink: 0;
+            padding-top: 2px;
         }
         
         #music-player-play-pause { 
@@ -221,12 +326,48 @@
             transition: all 0.3s ease; 
             flex-shrink: 0;
             backdrop-filter: blur(10px);
+            padding: 0;
+        }
+        
+        #music-player-icon {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            filter: brightness(0) invert(1);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+            transform-origin: center;
+        }
+        
+        #music-player-icon.icon-changing {
+            animation: iconChange 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes iconChange {
+            0% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(0.8) rotate(-10deg);
+                opacity: 0.5;
+            }
+            100% {
+                transform: scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+        
+        #music-player-play-pause:active #music-player-icon {
+            transform: scale(0.9);
+        }
+        
+        #music-player-play-pause:hover #music-player-icon {
+            transform: scale(1.1);
         }
         
         #music-player-play-pause:hover { 
             background: rgba(255, 255, 255, 0.2); 
             border-color: rgba(255, 255, 255, 0.5);
-            transform: scale(1.05);
         }
         
         #music-player-play-pause:active { 
@@ -248,6 +389,11 @@
                 height: 44px; 
                 font-size: 18px; 
             }
+            
+            #music-player-icon {
+                width: 20px;
+                height: 20px;
+            }
             #music-player-now-playing {
                 font-size: 10px;
             }
@@ -264,12 +410,33 @@
         <!-- Navbar -->
         <nav id="navbar">
             <a href="#" id="about-link">About</a>
+            <a href="#" id="help-link">Help</a>
         </nav>
+        
+        <!-- Help Modal -->
+        <div id="help-modal-overlay">
+            <div id="help-modal">
+                <div id="help-modal-header">
+                    <h2>How to Use</h2>
+                    <button id="help-modal-close">&times;</button>
+                </div>
+                <div id="help-modal-content">
+                    <ul>
+                        <li>Point your camera at a puzzle piece marker</li>
+                        <li>Keep the marker within the scanning square on screen</li>
+                        <li>3D model and audio will appear automatically</li>
+                        <li>Use the music player controls to play/pause audio</li>
+                        <li>Track your marker discovered progress with the marker counter at the top</li>
+                        <li>Audio continues playing even when marker is out of view</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
         
         <!-- Marker count bar -->
         <div id="marker-count-bar">
             <div id="marker-count-left">
-                <span id="marker-count-label">Markers Found</span>
+                <span id="marker-count-label">Markers discovered</span>
                 <div id="marker-boxes-container">
                     <div class="marker-box" id="marker-box-1"></div>
                     <div class="marker-box" id="marker-box-2"></div>
@@ -299,13 +466,19 @@
                     </div>
                 </div>
                 <div id="music-player-info">
-                    <div id="music-player-song-name">Welcome to the Music Man Project! Scan the 1st puzzle piece to get started.</div>
-                    <div id="music-player-progress-container">
-                        <div id="music-player-progress-bar"></div>
+                    <div id="music-player-main-row">
+                        <div id="music-player-controls">
+                            <button id="music-player-play-pause">
+                                <img id="music-player-icon" src="./assets/audio/icons/Play pause circle/pause-circle.svg" alt="Play/Pause">
+                            </button>
+                        </div>
+                        <div id="music-player-text-section">
+                            <div id="music-player-song-name">Welcome to the Music Man Project! Scan the 1st puzzle piece to get started.</div>
+                            <div id="music-player-progress-container">
+                                <div id="music-player-progress-bar"></div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                <div id="music-player-controls">
-                    <button id="music-player-play-pause">⏸</button>
                 </div>
             </div>
         </div>
@@ -904,7 +1077,8 @@
                 
                 // Update music player
                 if (typeof window.updateMusicPlayerForMarker === 'function') {
-                    console.log('Updating music player for current marker:', { audioEl: audioEl, songName: songName });
+                    // Reduced logging for better performance
+                    // console.log('Updating music player for current marker:', { audioEl: audioEl, songName: songName });
                     window.updateMusicPlayerForMarker(audioEl, songName);
                 }
                 
@@ -1147,12 +1321,13 @@
                         updateMarkerCountDisplay();
                     }
                     
-                    console.log('Marker tracking updated:', {
-                        currentMarker: currentMarker,
-                        lastMarker: lastMarker,
-                        scannedMarkers: Array.from(scannedMarkers),
-                        remainingMarkers: getRemainingMarkers()
-                    });
+                    // Reduced logging for better performance during marker detection
+                    // console.log('Marker tracking updated:', {
+                    //     currentMarker: currentMarker,
+                    //     lastMarker: lastMarker,
+                    //     scannedMarkers: Array.from(scannedMarkers),
+                    //     remainingMarkers: getRemainingMarkers()
+                    // });
                     
                     // Play audio based on currentMarker value
                     playAudioForCurrentMarker();
@@ -1185,6 +1360,7 @@
                 
                 // Keep models visible during persistence period
                 // Audio continues playing - controlled by play/pause button
+                // Reduced frequency from 100ms to 500ms for better performance
                 visibilityCheckInterval = setInterval(function() {
                     if (activeMarker === marker) {
                         showMarker(marker);
@@ -1194,7 +1370,7 @@
                         clearInterval(visibilityCheckInterval);
                         visibilityCheckInterval = null;
                     }
-                }, 100); // Check every 100ms
+                }, 500); // Check every 500ms (reduced from 100ms for better performance)
                 
                 // Start persistence timer - keep model visible for 30 seconds
                 // Audio continues playing regardless - controlled by play/pause button
@@ -1251,6 +1427,10 @@
         // Sound functionality (sound is always enabled, no toggle button)
         (function(){
             var aboutLink = document.getElementById('about-link');
+            var helpLink = document.getElementById('help-link');
+            var helpModal = document.getElementById('help-modal-overlay');
+            var helpModalClose = document.getElementById('help-modal-close');
+            
             // Make soundEnabled globally accessible for marker handlers
             window.soundEnabled = true;
             
@@ -1261,6 +1441,41 @@
                     alert('AR Demo - Marker Tracking\n\nThis demo uses AR.js to track barcode markers and display 3D models with audio.');
                 });
             }
+            
+            // Help modal handlers
+            if (helpLink) {
+                helpLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (helpModal) {
+                        helpModal.classList.add('active');
+                    }
+                });
+            }
+            
+            if (helpModalClose) {
+                helpModalClose.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (helpModal) {
+                        helpModal.classList.remove('active');
+                    }
+                });
+            }
+            
+            // Close modal when clicking outside
+            if (helpModal) {
+                helpModal.addEventListener('click', function(e) {
+                    if (e.target === helpModal) {
+                        helpModal.classList.remove('active');
+                    }
+                });
+            }
+            
+            // Close modal with Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && helpModal && helpModal.classList.contains('active')) {
+                    helpModal.classList.remove('active');
+                }
+            });
         })();
 
         // Music player control
@@ -1276,6 +1491,7 @@
             
             var currentAudio = null;
             var progressUpdateInterval = null;
+            var rafId = null; // For requestAnimationFrame cleanup
             var isPaused = false;
             var isInitialState = true; // Track if we're in the initial welcome state
             
@@ -1428,12 +1644,52 @@
             // Start progress update interval
             function startProgressUpdate() {
                 stopProgressUpdate();
-                // Keep updating progress even when paused/ended to show current position
-                progressUpdateInterval = setInterval(updateProgress, 100);
+                
+                if (!currentAudio) return;
+                
+                // Use requestAnimationFrame for smoother updates when audio is playing
+                // Fall back to interval for paused/ended states (less frequent)
+                var lastUpdate = 0;
+                
+                function updateLoop(timestamp) {
+                    if (!currentAudio) {
+                        stopProgressUpdate();
+                        return;
+                    }
+                    
+                    // Update every ~250ms (4 times per second) for better performance
+                    if (timestamp - lastUpdate >= 250) {
+                        updateProgress();
+                        lastUpdate = timestamp;
+                    }
+                    
+                    // Continue animation loop if audio is playing
+                    if (currentAudio && !currentAudio.paused && !currentAudio.ended) {
+                        rafId = requestAnimationFrame(updateLoop);
+                    } else {
+                        // Switch to interval for paused/ended states (less frequent)
+                        if (rafId) {
+                            cancelAnimationFrame(rafId);
+                            rafId = null;
+                        }
+                        progressUpdateInterval = setInterval(updateProgress, 500);
+                    }
+                }
+                
+                if (currentAudio && !currentAudio.paused && !currentAudio.ended) {
+                    rafId = requestAnimationFrame(updateLoop);
+                } else {
+                    // Use interval for paused/ended states (less frequent)
+                    progressUpdateInterval = setInterval(updateProgress, 500);
+                }
             }
             
             // Stop progress update interval
             function stopProgressUpdate() {
+                if (rafId) {
+                    cancelAnimationFrame(rafId);
+                    rafId = null;
+                }
                 if (progressUpdateInterval) {
                     clearInterval(progressUpdateInterval);
                     progressUpdateInterval = null;
@@ -1444,10 +1700,22 @@
             function updatePlayPauseButton() {
                 if (!playPauseBtn || !currentAudio) return;
                 
-                if (currentAudio.paused || isPaused || currentAudio.ended) {
-                    playPauseBtn.textContent = '▶';
-                } else {
-                    playPauseBtn.textContent = '⏸';
+                var iconImg = document.getElementById('music-player-icon');
+                if (iconImg) {
+                    // Add animation class
+                    iconImg.classList.add('icon-changing');
+                    
+                    // Update icon source
+                    if (currentAudio.paused || isPaused || currentAudio.ended) {
+                        iconImg.src = './assets/audio/icons/Play pause circle/play-circle.svg';
+                    } else {
+                        iconImg.src = './assets/audio/icons/Play pause circle/pause-circle.svg';
+                    }
+                    
+                    // Remove animation class after animation completes
+                    setTimeout(function() {
+                        iconImg.classList.remove('icon-changing');
+                    }, 300);
                 }
             }
             
@@ -1544,12 +1812,13 @@
                 
                 // When audio starts playing, ensure player is tracking it
                 audio.addEventListener('play', function() {
-                    console.log('Audio play event:', {
-                        audioId: 'audio' + (index + 1),
-                        currentAudio: currentAudio,
-                        audio: audio,
-                        isInitialState: isInitialState
-                    });
+                    // Reduced logging for better performance
+                    // console.log('Audio play event:', {
+                    //     audioId: 'audio' + (index + 1),
+                    //     currentAudio: currentAudio,
+                    //     audio: audio,
+                    //     isInitialState: isInitialState
+                    // });
                     
                     // Don't update player during initial state (audio unlock)
                     // Only update when a marker has been detected
@@ -1564,7 +1833,8 @@
                     
                     if (currentAudio !== audio) {
                         // If player isn't tracking this audio, update it
-                        console.log('Updating music player for new audio:', songName);
+                        // Reduced logging for better performance
+                        // console.log('Updating music player for new audio:', songName);
                         showMusicPlayer(audio, songName);
                     } else {
                         // Already tracking, but ensure it's visible and updated
@@ -1631,14 +1901,20 @@
                 });
                 
                 // Update progress bar as audio plays and save timestamp
+                // Throttled to reduce performance impact on marker detection
+                var lastTimeUpdate = 0;
                 audio.addEventListener('timeupdate', function() {
                     if (currentAudio === audio) {
-                        updateProgress();
-                        
-                        // Update stored timestamp periodically during playback
-                        var audioId = audio.id;
-                        if (audioId && window.audioTimestamps && window.audioTimestamps.hasOwnProperty(audioId)) {
-                            window.audioTimestamps[audioId] = audio.currentTime;
+                        var now = Date.now();
+                        // Throttle to update max once per 250ms (timeupdate fires ~4x/sec)
+                        if (now - lastTimeUpdate >= 250) {
+                            // Progress is already updated by requestAnimationFrame, so skip here
+                            // Only update timestamp
+                            var audioId = audio.id;
+                            if (audioId && window.audioTimestamps && window.audioTimestamps.hasOwnProperty(audioId)) {
+                                window.audioTimestamps[audioId] = audio.currentTime;
+                            }
+                            lastTimeUpdate = now;
                         }
                     }
                 });

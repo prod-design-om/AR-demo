@@ -1,34 +1,120 @@
-
-<!doctype HTML>
-<html>
-    <head>
-        <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    </head>
-    <script src="https://aframe.io/releases/0.9.0/aframe.min.js"></script>
-    <script src="https://rawgit.com/jeromeetienne/AR.js/master/aframe/build/aframe-ar.min.js"></script>
-    <script src="https://rawgit.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
-    
-    <body style='margin : 0px; overflow: hidden;'>
-        <!-- we add detectionMode and matrixCodeType to tell AR.js to recognize barcode markers -->
-        <a-scene embedded arjs='sourceType: webcam; debugUIEnabled: true; detectionMode: mono_and_matrix; matrixCodeType: 3x3;'>
-
-        <a-assets>
-            <a-asset-item id="animated-asset" src="https://raw.githubusercontent.com/nicolocarpignoli/nicolocarpignoli.github.io/master/ar-playground/models/CesiumMan.gltf"></a-asset-item>
-        </a-assets>
-
-        <a-marker type='barcode' value='7'>
-            <a-box position='0 0.5 0' color="yellow"></a-box>
-        </a-marker>
-
-        <a-marker id="animated-marker" type='barcode' value='6'>
-            <a-entity
-                gltf-model="#animated-asset"
-                scale="2">
-            </a-entity>
-        </a-marker>
-
-        <!-- use this <a-entity camera> to support multiple-markers, otherwise use <a-marker-camera> instead of </a-marker> -->
-        <a-entity camera></a-entity>
-        </a-scene>
-    </body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AR Demo - Barcode Tracking</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1em;
+        }
+        
+        .links-list {
+            list-style: none;
+        }
+        
+        .links-list li {
+            margin-bottom: 15px;
+        }
+        
+        .links-list a {
+            display: block;
+            padding: 15px 20px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            text-decoration: none;
+            color: #333;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+        
+        .links-list a:hover {
+            background: #667eea;
+            color: white;
+            transform: translateX(5px);
+            border-color: #667eea;
+        }
+        
+        .links-list a:active {
+            transform: translateX(2px);
+        }
+        
+        .file-name {
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+        
+        .file-path {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AR Demo</h1>
+        <p class="subtitle">Barcode Tracking Examples</p>
+        <ul class="links-list">
+            <li>
+                <a href="marker-tracking/barcode.html">
+                    <div class="file-name">Barcode</div>
+                    <div class="file-path">marker-tracking/barcode.html</div>
+                </a>
+            </li>
+            <li>
+                <a href="marker-tracking/barcode-load.html">
+                    <div class="file-name">Barcode Load</div>
+                    <div class="file-path">marker-tracking/barcode-load.html</div>
+                </a>
+            </li>
+            <li>
+                <a href="marker-tracking/barcode-load-with-audio.html">
+                    <div class="file-name">Barcode Load with Audio</div>
+                    <div class="file-path">marker-tracking/barcode-load-with-audio.html</div>
+                </a>
+            </li>
+            <li>
+                <a href="marker-tracking/barcode-load-with-audio copy.html">
+                    <div class="file-name">Barcode Load with Audio (Copy)</div>
+                    <div class="file-path">marker-tracking/barcode-load-with-audio copy.html</div>
+                </a>
+            </li>
+        </ul>
+    </div>
+</body>
 </html>
+
